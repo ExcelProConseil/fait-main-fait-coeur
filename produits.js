@@ -1,7 +1,10 @@
-// Modifiez ici votre adresse PayPal et vos produits.
+// Réglages du site. Les produits sont gérés depuis admin.html (Supabase).
+// La liste PRODUITS ci-dessous ne sert que tant que Supabase n'est pas configuré.
 window.CONFIG = {
   paypal: "A-REMPLACER@exemple.fr",   // adresse e-mail de votre compte PayPal
-  contact: "A-REMPLACER@exemple.fr"   // adresse qui reçoit les messages
+  contact: "A-REMPLACER@exemple.fr",  // adresse qui reçoit les messages
+  supabaseUrl: "A-REMPLACER",         // Supabase > Project Settings > API > Project URL
+  supabaseKey: "A-REMPLACER"          // clé "anon public" (publique par conception)
 };
 window.PRODUITS = [
   { id: "leon", nom: "Léon l'ourson", prix: 14, image: "images/leon.jpg",

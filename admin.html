@@ -3,62 +3,118 @@
 <meta name="robots" content="noindex"><title>Administration — Fait main Fait cœur</title>
 <link rel="stylesheet" href="style.css">
 <style>.prod{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin:16px 0;display:grid;gap:8px}
-label{font-size:.9rem;color:var(--muted)}textarea.out{width:100%;font-family:monospace;font-size:.85rem}
-.row{display:flex;gap:8px;flex-wrap:wrap}.small{background:var(--muted)}ol li{margin:6px 0}</style></head>
+label{font-size:.9rem;color:var(--muted)}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.small{background:var(--muted)}.danger{background:#b3261e}.apercu{width:140px;height:105px;object-fit:cover;border-radius:8px;background:var(--accent2)}
+#msg{position:sticky;top:0;padding:10px;border-radius:8px;background:var(--accent2);margin:8px 0;display:none}
+#login{max-width:360px}</style></head>
 <body><header></header><main>
 <h1>Administration</h1>
-<p>Modifiez vos produits ci-dessous, puis envoyez le résultat à Céline avec vos photos. Elle s’occupe de la mise en ligne.</p>
-<h2>Réglages</h2>
-<div class="prod"><label>Adresse e-mail PayPal</label><input id="paypal"><label>Adresse qui reçoit les messages du formulaire de contact</label><input id="contact"></div>
-<h2>Produits</h2>
-<div id="liste"></div>
-<div class="row"><button class="btn small" id="ajout">+ Ajouter un produit</button></div>
-<h2>Résultat</h2>
-<textarea class="out" id="out" rows="14" readonly></textarea>
-<div class="row"><button class="btn" id="copier">Copier le texte</button>
-<button class="btn" id="mail">Envoyer par e-mail</button></div>
-<h2>Comment m’envoyer vos modifications</h2>
-<ol><li>Remplissez les produits ci-dessus.</li>
-<li>Cliquez sur « Envoyer par e-mail » : votre messagerie s’ouvre avec le texte déjà écrit. Indiquez l’adresse de Céline et envoyez. (Si rien ne s’ouvre, cliquez sur « Copier le texte » et collez-le dans un message.)</li>
-<li><strong>Photos :</strong> joignez-les au même e-mail, avec exactement le nom écrit dans le champ « Photo » de chaque produit (ex. <code>lapin.jpg</code>).</li></ol>
+<div id="msg"></div>
+<p id="config-ko" style="display:none">Supabase n'est pas encore configuré (voir <code>produits.js</code>).</p>
+
+<form id="login" style="display:none">
+  <p>Connectez-vous pour gérer vos produits.</p>
+  <input id="email" type="email" placeholder="E-mail" autocomplete="username" required>
+  <input id="mdp" type="password" placeholder="Mot de passe" autocomplete="current-password" required>
+  <button class="btn">Se connecter</button>
+</form>
+
+<section id="app" style="display:none">
+  <div class="row"><button class="btn" id="ajout">+ Ajouter un produit</button>
+  <button class="btn small" id="quitter">Se déconnecter</button></div>
+  <p>Chaque modification s'affiche sur le site dès que vous cliquez sur « Enregistrer ».</p>
+  <div id="liste"></div>
+</section>
 </main><footer></footer>
 <script src="produits.js"></script><script src="app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
-var data=JSON.parse(JSON.stringify(PRODUITS));
 var $=function(i){return document.getElementById(i)};
-$("paypal").value=CONFIG.paypal;$("contact").value=CONFIG.contact;
-function q(s){return JSON.stringify(String(s||""))}
-function sortie(){
-  var l=data.map(function(p,i){
-    var id=(p.id||"produit"+(i+1)).replace(/[^a-z0-9-]/gi,"-").toLowerCase();
-    return '  { id: '+q(id)+', nom: '+q(p.nom)+', prix: '+(p.prix===null||p.prix===""||isNaN(p.prix)?'null':Number(p.prix))+', image: '+q(p.image.indexOf("/")<0&&p.image?"images/"+p.image:p.image)+',\n    description: '+q(p.description)+' }';
-  }).join(",\n");
-  $("out").value='// Modifiez ici votre adresse PayPal et vos produits.\nwindow.CONFIG = {\n  paypal: '+q($("paypal").value.trim())+',\n  contact: '+q($("contact").value.trim())+'\n};\nwindow.PRODUITS = [\n'+l+'\n];\n';
-}
-function rendu(){
-  $("liste").innerHTML="";
-  data.forEach(function(p,i){
-    var d=document.createElement("div");d.className="prod";
-    d.innerHTML='<label>Nom</label><input data-k="nom"><label>Prix en € (laisser vide = « prix sur demande »)</label><input data-k="prix" inputmode="decimal"><label>Photo (nom du fichier, ex. leon.jpg)</label><input data-k="image"><label>Description</label><textarea data-k="description" rows="3"></textarea><div class="row"><button class="btn small" data-a="haut">↑</button><button class="btn small" data-a="bas">↓</button><button class="btn small" data-a="suppr">Supprimer</button></div>';
-    d.querySelectorAll("[data-k]").forEach(function(e){
-      var k=e.dataset.k;e.value=p[k]===null?"":(k==="image"?String(p[k]).replace(/^images\//,""):p[k]);
-      e.oninput=function(){p[k]=k==="prix"?(e.value===""?null:e.value.replace(",",".")):e.value;sortie()};
-    });
-    d.querySelectorAll("[data-a]").forEach(function(b){b.onclick=function(){
-      var a=b.dataset.a;
-      if(a==="suppr"){if(!confirm("Supprimer ce produit ?"))return;data.splice(i,1)}
-      else{var j=a==="haut"?i-1:i+1;if(j<0||j>=data.length)return;var t=data[i];data[i]=data[j];data[j]=t}
-      rendu();sortie()}});
-    $("liste").appendChild(d);
-  });
-}
-$("ajout").onclick=function(){data.push({id:"",nom:"Nouveau produit",prix:null,image:"",description:""});rendu();sortie()};
-$("paypal").oninput=$("contact").oninput=sortie;
-$("copier").onclick=function(){sortie();$("out").select();
-  (navigator.clipboard?navigator.clipboard.writeText($("out").value):Promise.reject()).catch(function(){document.execCommand("copy")});
-  this.textContent="Copié ✔";var b=this;setTimeout(function(){b.textContent="Copier le texte"},2000)};
-$("mail").onclick=function(){sortie();location.href="mailto:?subject="+encodeURIComponent("Modifications du site Fait main Fait cœur")+"&body="+encodeURIComponent("Bonjour, voici mes modifications (photos jointes) :
+function msg(t,err){var m=$("msg");m.textContent=t;m.style.display="block";m.style.background=err?"#f9dedc":"";m.style.color=err?"#410e0b":"";clearTimeout(msg.t);msg.t=setTimeout(function(){m.style.display="none"},5000)}
+var C=window.CONFIG,sb=null;
+if(!C.supabaseUrl||C.supabaseUrl.indexOf("A-REMPLACER")>=0){$("config-ko").style.display="block"}
+else{sb=supabase.createClient(C.supabaseUrl,C.supabaseKey);
+  sb.auth.getSession().then(function(r){r.data.session?afficher():$("login").style.display="block"})}
 
-"+$("out").value)};
-rendu();sortie();
+$("login").onsubmit=function(e){e.preventDefault();
+  sb.auth.signInWithPassword({email:$("email").value.trim(),password:$("mdp").value}).then(function(r){
+    if(r.error){msg("E-mail ou mot de passe incorrect.",true);return}
+    $("login").style.display="none";afficher()})};
+$("quitter").onclick=function(){sb.auth.signOut().then(function(){location.reload()})};
+
+function afficher(){$("app").style.display="block";charger()}
+var produits=[];
+function charger(){
+  return sb.from("produits").select("*").order("ordre").order("created_at").then(function(r){
+    if(r.error){msg("Impossible de charger les produits.",true);return}
+    produits=r.data;rendu()})}
+
+// Réduit la photo (les photos de téléphone sont très lourdes)
+function reduire(file){return new Promise(function(ok,ko){
+  var img=new Image(),u=URL.createObjectURL(file);
+  img.onload=function(){var max=1200,s=Math.min(1,max/Math.max(img.width,img.height));
+    var c=document.createElement("canvas");c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);
+    c.getContext("2d").drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(u);
+    c.toBlob(function(b){b?ok(b):ko()},"image/jpeg",0.85)};
+  img.onerror=function(){ko()};img.src=u})}
+function cheminPhoto(url){var k="/object/public/photos/";var i=url.indexOf(k);return i<0?null:decodeURIComponent(url.slice(i+k.length))}
+
+function champ(parent,lib,el){var l=document.createElement("label");l.textContent=lib;parent.appendChild(l);parent.appendChild(el);return el}
+function btn(txt,cls,fn){var b=document.createElement("button");b.className="btn "+cls;b.textContent=txt;b.onclick=fn;return b}
+
+function rendu(){
+  var L=$("liste");L.innerHTML="";
+  if(!produits.length)L.textContent="Aucun produit. Cliquez sur « Ajouter un produit ».";
+  produits.forEach(function(p,i){
+    var d=document.createElement("div");d.className="prod";
+    var nom=document.createElement("input");nom.value=p.nom;champ(d,"Nom",nom);
+    var prix=document.createElement("input");prix.inputMode="decimal";prix.value=p.prix==null?"":String(p.prix).replace(".",",");
+    champ(d,"Prix en € (laissez vide pour « prix sur demande »)",prix);
+    var desc=document.createElement("textarea");desc.rows=3;desc.value=p.description;champ(d,"Description",desc);
+    var ap=document.createElement("img");ap.className="apercu";ap.alt="";if(p.image_url)ap.src=p.image_url;
+    var f=document.createElement("input");f.type="file";f.accept="image/*";
+    f.onchange=function(){if(f.files[0])ap.src=URL.createObjectURL(f.files[0])};
+    var lp=document.createElement("label");lp.textContent="Photo";d.appendChild(lp);
+    var r0=document.createElement("div");r0.className="row";r0.appendChild(ap);r0.appendChild(f);d.appendChild(r0);
+    var r=document.createElement("div");r.className="row";
+    r.appendChild(btn("Enregistrer","",function(){enregistrer(p,nom,prix,desc,f,this)}));
+    r.appendChild(btn("↑","small",function(){bouger(i,-1)}));
+    r.appendChild(btn("↓","small",function(){bouger(i,1)}));
+    r.appendChild(btn("Supprimer","danger",function(){supprimer(p)}));
+    d.appendChild(r);L.appendChild(d)})}
+
+function enregistrer(p,nom,prix,desc,f,b){
+  var v=prix.value.trim().replace(",",".").replace(/\s?€/,"");
+  if(!nom.value.trim()){msg("Le nom est obligatoire.",true);return}
+  if(v!==""&&(isNaN(v)||Number(v)<0)){msg("Le prix doit être un nombre (ex. 14 ou 8,50).",true);return}
+  b.disabled=true;b.textContent="Enregistrement…";
+  var maj={nom:nom.value.trim(),prix:v===""?null:Number(v),description:desc.value.trim()};
+  var vieux=p.image_url;
+  var etape=f.files[0]?reduire(f.files[0]).then(function(blob){
+      var chemin=Date.now()+"-"+Math.random().toString(36).slice(2,8)+".jpg";
+      return sb.storage.from("photos").upload(chemin,blob,{contentType:"image/jpeg"}).then(function(r){
+        if(r.error)throw r.error;maj.image_url=sb.storage.from("photos").getPublicUrl(chemin).data.publicUrl})})
+    :Promise.resolve();
+  etape.then(function(){return sb.from("produits").update(maj).eq("id",p.id)}).then(function(r){
+    if(r.error)throw r.error;
+    if(maj.image_url&&vieux){var c=cheminPhoto(vieux);if(c)sb.storage.from("photos").remove([c])}
+    msg("Enregistré ✔ Le site est à jour.");return charger()
+  }).catch(function(){msg("Échec de l'enregistrement. Réessayez.",true);b.disabled=false;b.textContent="Enregistrer"})}
+
+function supprimer(p){
+  if(!confirm("Supprimer « "+p.nom+" » du site ? Cette action est définitive."))return;
+  sb.from("produits").delete().eq("id",p.id).then(function(r){
+    if(r.error){msg("Suppression impossible.",true);return}
+    var c=p.image_url&&cheminPhoto(p.image_url);if(c)sb.storage.from("photos").remove([c]);
+    msg("Produit supprimé.");charger()})}
+
+function bouger(i,s){var j=i+s;if(j<0||j>=produits.length)return;
+  var ordre=produits.map(function(_,k){return k+1});var t=ordre[i];ordre[i]=ordre[j];ordre[j]=t;
+  Promise.all(produits.map(function(p,k){return sb.from("produits").update({ordre:ordre[k]}).eq("id",p.id)})).then(charger)}
+
+$("ajout").onclick=function(){
+  var max=produits.reduce(function(m,p){return Math.max(m,p.ordre)},0);
+  sb.from("produits").insert({nom:"Nouveau produit",ordre:max+1}).then(function(r){
+    if(r.error){msg("Ajout impossible.",true);return}
+    msg("Produit ajouté : remplissez-le puis enregistrez.");charger()})};
 </script></body></html>
