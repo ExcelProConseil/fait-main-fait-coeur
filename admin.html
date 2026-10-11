@@ -7,7 +7,7 @@ label{font-size:.9rem;color:var(--muted)}textarea.out{width:100%;font-family:mon
 .row{display:flex;gap:8px;flex-wrap:wrap}.small{background:var(--muted)}ol li{margin:6px 0}</style></head>
 <body><header></header><main>
 <h1>Administration</h1>
-<p>Modifiez vos produits ci-dessous, puis copiez le résultat et enregistrez-le dans GitHub (étapes tout en bas).</p>
+<p>Modifiez vos produits ci-dessous, puis envoyez le résultat à Céline avec vos photos. Elle s’occupe de la mise en ligne.</p>
 <h2>Réglages</h2>
 <div class="prod"><label>Adresse e-mail PayPal</label><input id="paypal"><label>Adresse qui reçoit les messages du formulaire de contact</label><input id="contact"></div>
 <h2>Produits</h2>
@@ -16,14 +16,11 @@ label{font-size:.9rem;color:var(--muted)}textarea.out{width:100%;font-family:mon
 <h2>Résultat</h2>
 <textarea class="out" id="out" rows="14" readonly></textarea>
 <div class="row"><button class="btn" id="copier">Copier le texte</button>
-<a class="btn" target="_blank" rel="noopener" id="gh" href="https://github.com/ExcelProConseil/fait-main-fait-coeur/edit/main/produits.js">Ouvrir produits.js dans GitHub</a></div>
-<h2>Comment enregistrer</h2>
-<ol><li>Cliquez sur « Copier le texte ».</li>
-<li>Cliquez sur « Ouvrir produits.js dans GitHub » (connectez-vous si besoin).</li>
-<li>Dans l’éditeur, sélectionnez tout (Ctrl+A) et collez (Ctrl+V).</li>
-<li>Cliquez sur « Commit changes » en haut à droite, puis confirmez.</li>
-<li>Le site est mis à jour en 1 à 2 minutes.</li></ol>
-<p><strong>Photos :</strong> dans GitHub, ouvrez le dossier <code>images</code>, cliquez sur Add file → Upload files, déposez la photo, puis « Commit changes ». Écrivez ensuite son nom exact (ex. <code>lapin.jpg</code>) dans le champ « Photo » du produit.</p>
+<button class="btn" id="mail">Envoyer par e-mail</button></div>
+<h2>Comment m’envoyer vos modifications</h2>
+<ol><li>Remplissez les produits ci-dessus.</li>
+<li>Cliquez sur « Envoyer par e-mail » : votre messagerie s’ouvre avec le texte déjà écrit. Indiquez l’adresse de Céline et envoyez. (Si rien ne s’ouvre, cliquez sur « Copier le texte » et collez-le dans un message.)</li>
+<li><strong>Photos :</strong> joignez-les au même e-mail, avec exactement le nom écrit dans le champ « Photo » de chaque produit (ex. <code>lapin.jpg</code>).</li></ol>
 </main><footer></footer>
 <script src="produits.js"></script><script src="app.js"></script>
 <script>
@@ -60,5 +57,8 @@ $("paypal").oninput=$("contact").oninput=sortie;
 $("copier").onclick=function(){sortie();$("out").select();
   (navigator.clipboard?navigator.clipboard.writeText($("out").value):Promise.reject()).catch(function(){document.execCommand("copy")});
   this.textContent="Copié ✔";var b=this;setTimeout(function(){b.textContent="Copier le texte"},2000)};
+$("mail").onclick=function(){sortie();location.href="mailto:?subject="+encodeURIComponent("Modifications du site Fait main Fait cœur")+"&body="+encodeURIComponent("Bonjour, voici mes modifications (photos jointes) :
+
+"+$("out").value)};
 rendu();sortie();
 </script></body></html>
