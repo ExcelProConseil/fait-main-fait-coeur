@@ -23,7 +23,7 @@
         var action=p.prix==null
           ? '<a class="btn" href="contact.html?produit='+encodeURIComponent(p.nom)+'">Demander un prix</a>'
           : '<a class="btn" target="_blank" rel="noopener" href="https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business='+encodeURIComponent(CONFIG.paypal)+'&item_name='+encodeURIComponent(p.nom)+'&amount='+p.prix+'&currency_code=EUR">Payer avec PayPal</a>';
-        var img=p.image?'<img src="'+esc(p.image)+'" alt="'+esc(p.nom)+'" onerror="this.replaceWith(document.createTextNode('🧸'))">':'🧸';
+        var img=p.image?'<img src="'+esc(p.image)+'" alt="'+esc(p.nom)+'" onerror="this.replaceWith(document.createTextNode(\'🧸\'))">':'🧸';
         return '<article class="card"><div class="img">'+img+'</div><div class="body"><h3>'+esc(p.nom)+'</h3><p>'+esc(p.description)+'</p><div class="prix">'+(p.prix==null?'Prix sur demande':String(p.prix).replace(".",",")+' €')+'</div>'+action+'</div></article>';
       }).join("");
     });
