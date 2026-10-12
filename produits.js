@@ -3,8 +3,8 @@
 window.CONFIG = {
   paypal: "A-REMPLACER@exemple.fr",   // adresse e-mail de votre compte PayPal
   contact: "A-REMPLACER@exemple.fr",  // adresse qui reçoit les messages
-  supabaseUrl: "A-REMPLACER",         // Supabase > Project Settings > API > Project URL
-  supabaseKey: "A-REMPLACER"          // clé "anon public" (publique par conception)
+  supabaseUrl: "https://hzcmrxhntcnchkxeqrht.supabase.co",         // Supabase > Project Settings > API > Project URL
+  supabaseKey: "sb_publishable_r3O6Zi5OxsBZhKP3cldEKw_fpj7SPfV"          // clé "anon public" (publique par conception)
 };
 window.PRODUITS = [
   { id: "leon", nom: "Léon l'ourson", prix: 14, image: "images/leon.jpg",
