@@ -26,3 +26,6 @@ footer{text-align:center;color:var(--muted);padding:24px;border-top:1px solid va
 section h2{margin-top:40px}
 .portrait{max-width:280px;width:100%;border-radius:14px;display:block;margin-top:12px}
 .logo{letter-spacing:.04em}
+.tbl{width:100%;border-collapse:collapse;margin-bottom:16px}.tbl th,.tbl td{text-align:left;padding:8px;border-bottom:1px solid var(--border)}
+.q{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:6px;cursor:pointer;padding:2px 8px;font:inherit}
+.row{display:flex;gap:8px;flex-wrap:wrap}.alt{background:var(--muted)}

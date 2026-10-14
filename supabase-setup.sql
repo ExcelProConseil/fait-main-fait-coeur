@@ -33,3 +33,6 @@ insert into public.produits (nom, prix, description, ordre) values
 
 -- ===== Ajout : catégories (à exécuter une fois, pour les sites déjà installés) =====
 alter table public.produits add column if not exists categorie text not null default '';
+
+-- ===== Ajout : poids en grammes (calcul de la livraison) =====
+alter table public.produits add column if not exists poids int not null default 0;
