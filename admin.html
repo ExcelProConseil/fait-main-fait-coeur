@@ -70,6 +70,9 @@ function rendu(){
     var nom=document.createElement("input");nom.value=p.nom;champ(d,"Nom",nom);
     var prix=document.createElement("input");prix.inputMode="decimal";prix.value=p.prix==null?"":String(p.prix).replace(".",",");
     champ(d,"Prix en € (laissez vide pour « prix sur demande »)",prix);
+    var cat=document.createElement("select");
+    [["","— Choisir une catégorie —"]].concat(CATEGORIES.map(function(c){return [c.id,c.titre]})).forEach(function(o){var op=document.createElement("option");op.value=o[0];op.textContent=o[1];cat.appendChild(op)});
+    cat.value=p.categorie||"";champ(d,"Catégorie",cat);
     var desc=document.createElement("textarea");desc.rows=3;desc.value=p.description;champ(d,"Description",desc);
     var ap=document.createElement("img");ap.className="apercu";ap.alt="";if(p.image_url)ap.src=p.image_url;
     var f=document.createElement("input");f.type="file";f.accept="image/*";
@@ -77,18 +80,18 @@ function rendu(){
     var lp=document.createElement("label");lp.textContent="Photo";d.appendChild(lp);
     var r0=document.createElement("div");r0.className="row";r0.appendChild(ap);r0.appendChild(f);d.appendChild(r0);
     var r=document.createElement("div");r.className="row";
-    r.appendChild(btn("Enregistrer","",function(){enregistrer(p,nom,prix,desc,f,this)}));
+    r.appendChild(btn("Enregistrer","",function(){enregistrer(p,nom,prix,desc,f,this,cat)}));
     r.appendChild(btn("↑","small",function(){bouger(i,-1)}));
     r.appendChild(btn("↓","small",function(){bouger(i,1)}));
     r.appendChild(btn("Supprimer","danger",function(){supprimer(p)}));
     d.appendChild(r);L.appendChild(d)})}
 
-function enregistrer(p,nom,prix,desc,f,b){
+function enregistrer(p,nom,prix,desc,f,b,cat){
   var v=prix.value.trim().replace(",",".").replace(/\s?€/,"");
   if(!nom.value.trim()){msg("Le nom est obligatoire.",true);return}
   if(v!==""&&(isNaN(v)||Number(v)<0)){msg("Le prix doit être un nombre (ex. 14 ou 8,50).",true);return}
   b.disabled=true;b.textContent="Enregistrement…";
-  var maj={nom:nom.value.trim(),prix:v===""?null:Number(v),description:desc.value.trim()};
+  var maj={nom:nom.value.trim(),prix:v===""?null:Number(v),description:desc.value.trim(),categorie:cat.value};
   var vieux=p.image_url;
   var etape=f.files[0]?reduire(f.files[0]).then(function(blob){
       var chemin=Date.now()+"-"+Math.random().toString(36).slice(2,8)+".jpg";
@@ -114,7 +117,7 @@ function bouger(i,s){var j=i+s;if(j<0||j>=produits.length)return;
 
 $("ajout").onclick=function(){
   var max=produits.reduce(function(m,p){return Math.max(m,p.ordre)},0);
-  sb.from("produits").insert({nom:"Nouveau produit",ordre:max+1}).then(function(r){
+  sb.from("produits").insert({nom:"Nouveau produit",ordre:max+1,categorie:""}).then(function(r){
     if(r.error){msg("Ajout impossible.",true);return}
     msg("Produit ajouté : remplissez-le puis enregistrez.");charger()})};
 </script></body></html>

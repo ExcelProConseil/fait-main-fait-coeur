@@ -30,3 +30,6 @@ insert into public.produits (nom, prix, description, ordre) values
  ('Léon l''ourson', 14, 'Petit ourson au crochet, tout doux, fait main avec amour.', 1),
  ('Suspensions d''Halloween', 8, 'Suspensions décoratives au crochet pour une déco d''Halloween originale.', 2),
  ('Cadeau de naissance', null, 'Un cadeau unique et personnalisé pour accueillir bébé. Prix sur demande.', 3);
+
+-- ===== Ajout : catégories (à exécuter une fois, pour les sites déjà installés) =====
+alter table public.produits add column if not exists categorie text not null default '';
