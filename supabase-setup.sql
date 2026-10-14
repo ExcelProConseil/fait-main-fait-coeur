@@ -36,3 +36,15 @@ alter table public.produits add column if not exists categorie text not null def
 
 -- ===== Ajout : poids en grammes (calcul de la livraison) =====
 alter table public.produits add column if not exists poids int not null default 0;
+
+-- ===== Ajout : photos et textes des 6 univers de l'accueil =====
+create table if not exists public.univers (
+  id text primary key,
+  texte text not null default '',
+  image_url text not null default ''
+);
+alter table public.univers enable row level security;
+create policy "Univers lecture publique" on public.univers for select using (true);
+create policy "Univers ajout connecte" on public.univers for insert to authenticated with check (true);
+create policy "Univers modif connecte" on public.univers for update to authenticated using (true) with check (true);
+insert into public.univers (id) values ('bebes'),('enfants'),('adultes'),('maison'),('fleurs'),('deco') on conflict (id) do nothing;

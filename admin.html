@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex"><title>Administration — Fait main Fait cœur</title>
+<meta name="robots" content="noindex"><title>Administration — FAIT MAIN FAIT CŒUR</title>
 <link rel="stylesheet" href="style.css">
 <style>.prod{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin:16px 0;display:grid;gap:8px}
 label{font-size:.9rem;color:var(--muted)}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -24,6 +24,9 @@ label{font-size:.9rem;color:var(--muted)}.row{display:flex;gap:8px;flex-wrap:wra
   <button class="btn small" id="quitter">Se déconnecter</button></div>
   <p>Chaque modification s'affiche sur le site dès que vous cliquez sur « Enregistrer ».</p>
   <div id="liste"></div>
+  <h2>Les univers de la page d'accueil</h2>
+  <p>Changez la photo et le petit texte de chacun des 6 cadres.</p>
+  <div id="univers-admin"></div>
 </section>
 </main><footer></footer>
 <script src="produits.js"></script><script src="app.js"></script>
@@ -42,7 +45,7 @@ $("login").onsubmit=function(e){e.preventDefault();
     $("login").style.display="none";afficher()})};
 $("quitter").onclick=function(){sb.auth.signOut().then(function(){location.reload()})};
 
-function afficher(){$("app").style.display="block";charger()}
+function afficher(){$("app").style.display="block";charger();chargerUnivers()}
 var produits=[];
 function charger(){
   return sb.from("produits").select("*").order("ordre").order("created_at").then(function(r){
@@ -122,4 +125,39 @@ $("ajout").onclick=function(){
   sb.from("produits").insert({nom:"Nouveau produit",ordre:max+1,categorie:""}).then(function(r){
     if(r.error){msg("Ajout impossible.",true);return}
     msg("Produit ajouté : remplissez-le puis enregistrez.");charger()})};
+
+// ----- Univers de l'accueil -----
+var univers={};
+function chargerUnivers(){
+  sb.from("univers").select("*").then(function(r){
+    if(r.error){msg("Impossible de charger les univers (la commande SQL des univers a-t-elle été exécutée ?).",true);return}
+    univers={};r.data.forEach(function(u){univers[u.id]=u});renduUnivers()})}
+function renduUnivers(){
+  var L=$("univers-admin");L.innerHTML="";
+  CATEGORIES.forEach(function(c){
+    var u=univers[c.id]||{id:c.id,texte:"",image_url:""};
+    var d=document.createElement("div");d.className="prod";
+    var h=document.createElement("strong");h.textContent=c.titre;d.appendChild(h);
+    var ap=document.createElement("img");ap.className="apercu";ap.alt="";if(u.image_url)ap.src=u.image_url;
+    var f=document.createElement("input");f.type="file";f.accept="image/*";
+    f.onchange=function(){if(f.files[0])ap.src=URL.createObjectURL(f.files[0])};
+    var lp=document.createElement("label");lp.textContent="Photo";d.appendChild(lp);
+    var r0=document.createElement("div");r0.className="row";r0.appendChild(ap);r0.appendChild(f);d.appendChild(r0);
+    var tx=document.createElement("textarea");tx.rows=2;tx.value=u.texte||"";champ(d,"Petit texte sous le titre (facultatif)",tx);
+    var r=document.createElement("div");r.className="row";
+    r.appendChild(btn("Enregistrer","",function(){enregistrerUnivers(c.id,u,tx,f,this)}));
+    d.appendChild(r);L.appendChild(d)})}
+function enregistrerUnivers(id,u,tx,f,b){
+  b.disabled=true;b.textContent="Enregistrement…";
+  var maj={id:id,texte:tx.value.trim(),image_url:u.image_url||""};var vieux=u.image_url;
+  var etape=f.files[0]?reduire(f.files[0]).then(function(blob){
+      var chemin="univers-"+id+"-"+Date.now()+".jpg";
+      return sb.storage.from("photos").upload(chemin,blob,{contentType:"image/jpeg"}).then(function(r){
+        if(r.error)throw r.error;maj.image_url=sb.storage.from("photos").getPublicUrl(chemin).data.publicUrl})})
+    :Promise.resolve();
+  etape.then(function(){return sb.from("univers").upsert(maj)}).then(function(r){
+    if(r.error)throw r.error;
+    if(f.files[0]&&vieux){var c=cheminPhoto(vieux);if(c)sb.storage.from("photos").remove([c])}
+    msg("Enregistré ✔ L'accueil est à jour.");chargerUnivers()
+  }).catch(function(){msg("Échec de l'enregistrement. Réessayez.",true);b.disabled=false;b.textContent="Enregistrer"})}
 </script></body></html>

@@ -17,9 +17,23 @@
   // Accueil : les 6 univers
   var un=document.getElementById("univers");
   if(un){
-    un.innerHTML=CATEGORIES.map(function(c){
-      return '<a class="card cadre" href="boutique.html#'+c.id+'"><div class="img"><img src="'+esc(c.image)+'" alt="" onerror="this.remove()"></div><div class="body"><h3>'+esc(c.titre)+'</h3>'+(c.texte?'<p>'+esc(c.texte)+'</p>':'')+'</div></a>';
-    }).join("");
+    var dessiner=function(L){
+      un.innerHTML=L.map(function(c){
+        return '<a class="card cadre" href="boutique.html#'+c.id+'"><div class="img"><img src="'+esc(c.image)+'" alt="" onerror="this.remove()"></div><div class="body"><h3>'+esc(c.titre)+'</h3>'+(c.texte?'<p>'+esc(c.texte)+'</p>':'')+'</div></a>';
+      }).join("");
+    };
+    dessiner(CATEGORIES);
+    var cf=window.CONFIG;
+    if(cf.supabaseUrl&&cf.supabaseUrl.indexOf("A-REMPLACER")<0){
+      fetch(cf.supabaseUrl+"/rest/v1/univers?select=*",{headers:{apikey:cf.supabaseKey}})
+        .then(function(r){return r.ok?r.json():Promise.reject()})
+        .then(function(rows){
+          dessiner(CATEGORIES.map(function(c){
+            var r=rows.filter(function(x){return x.id===c.id})[0]||{};
+            return {id:c.id,titre:c.titre,texte:r.texte||c.texte,image:r.image_url||c.image};
+          }));
+        }).catch(function(){});
+    }
   }
 
   // Boutique : produits par catégorie
