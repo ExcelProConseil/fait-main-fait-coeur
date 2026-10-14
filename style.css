@@ -29,3 +29,5 @@ section h2{margin-top:40px}
 .tbl{width:100%;border-collapse:collapse;margin-bottom:16px}.tbl th,.tbl td{text-align:left;padding:8px;border-bottom:1px solid var(--border)}
 .q{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:6px;cursor:pointer;padding:2px 8px;font:inherit}
 .row{display:flex;gap:8px;flex-wrap:wrap}.alt{background:var(--muted)}
+.logo-hero{width:160px;height:160px;display:block;margin:0 auto 12px}
+.portrait{max-width:200px;border-radius:50%}
