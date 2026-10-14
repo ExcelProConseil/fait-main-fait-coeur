@@ -15,25 +15,26 @@
   var LISTE=[];
 
   // Accueil : les 6 univers
+  // Titres, textes et photos des 6 univers (modifiables dans l'administration)
+  function fusion(rows){
+    return CATEGORIES.map(function(c){
+      var r=(rows||[]).filter(function(x){return x.id===c.id})[0]||{};
+      return {id:c.id,titre:r.titre||c.titre,texte:r.texte||c.texte,image:r.image_url||c.image};
+    });
+  }
+  var cf=window.CONFIG;
+  var UP=(cf.supabaseUrl&&cf.supabaseUrl.indexOf("A-REMPLACER")<0)
+    ? fetch(cf.supabaseUrl+"/rest/v1/univers?select=*",{headers:{apikey:cf.supabaseKey}}).then(function(r){return r.ok?r.json():[]}).catch(function(){return []})
+    : Promise.resolve([]);
+
+  // Accueil : les 6 univers
   var un=document.getElementById("univers");
   if(un){
-    var dessiner=function(L){
-      un.innerHTML=L.map(function(c){
+    UP.then(function(rows){
+      un.innerHTML=fusion(rows).map(function(c){
         return '<a class="card cadre" href="boutique.html#'+c.id+'"><div class="img"><img src="'+esc(c.image)+'" alt="" onerror="this.remove()"></div><div class="body"><h3>'+esc(c.titre)+'</h3>'+(c.texte?'<p>'+esc(c.texte)+'</p>':'')+'</div></a>';
       }).join("");
-    };
-    dessiner(CATEGORIES);
-    var cf=window.CONFIG;
-    if(cf.supabaseUrl&&cf.supabaseUrl.indexOf("A-REMPLACER")<0){
-      fetch(cf.supabaseUrl+"/rest/v1/univers?select=*",{headers:{apikey:cf.supabaseKey}})
-        .then(function(r){return r.ok?r.json():Promise.reject()})
-        .then(function(rows){
-          dessiner(CATEGORIES.map(function(c){
-            var r=rows.filter(function(x){return x.id===c.id})[0]||{};
-            return {id:c.id,titre:c.titre,texte:r.texte||c.texte,image:r.image_url||c.image};
-          }));
-        }).catch(function(){});
-    }
+    });
   }
 
   // Boutique : produits par catégorie
@@ -54,15 +55,16 @@
     return '<article class="card"><div class="img">'+img+'</div><div class="body"><h3>'+esc(p.nom)+'</h3><p>'+esc(p.description)+'</p><div class="prix">'+(p.prix==null?'Prix sur demande':String(p.prix).replace(".",",")+' €')+'</div>'+action+'</div></article>';
   }
   if(el){
-    charger().then(function(liste){
+    Promise.all([charger(),UP]).then(function(res){
+      var liste=res[0],CATS=fusion(res[1]);
       if(!liste){el.innerHTML="<p>La boutique est momentanément indisponible, merci de revenir plus tard.</p>";return}
       LISTE=liste;
-      var html=CATEGORIES.map(function(c){
+      var html=CATS.map(function(c){
         var l=liste.filter(function(p){return p.categorie===c.id});
         return '<section id="'+c.id+'"><h2>'+esc(c.titre)+'</h2>'+
           (l.length?'<div class="grid">'+l.map(carte).join("")+'</div>':'<p class="muted">De nouvelles confections arrivent bientôt.</p>')+'</section>';
       }).join("");
-      var autres=liste.filter(function(p){return !CATEGORIES.some(function(c){return c.id===p.categorie})});
+      var autres=liste.filter(function(p){return !CATS.some(function(c){return c.id===p.categorie})});
       if(autres.length)html+='<section id="autres"><h2>Autres confections</h2><div class="grid">'+autres.map(carte).join("")+'</div></section>';
       el.innerHTML=html;
       el.onclick=function(e){var b=e.target.closest(".add");if(!b)return;

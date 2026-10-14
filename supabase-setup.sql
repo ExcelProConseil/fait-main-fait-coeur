@@ -48,3 +48,6 @@ create policy "Univers lecture publique" on public.univers for select using (tru
 create policy "Univers ajout connecte" on public.univers for insert to authenticated with check (true);
 create policy "Univers modif connecte" on public.univers for update to authenticated using (true) with check (true);
 insert into public.univers (id) values ('bebes'),('enfants'),('adultes'),('maison'),('fleurs'),('deco') on conflict (id) do nothing;
+
+-- ===== Ajout : titres modifiables des 6 catégories =====
+alter table public.univers add column if not exists titre text not null default '';
