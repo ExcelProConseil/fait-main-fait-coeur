@@ -83,17 +83,16 @@
     var rendrePanier=function(){
       var pn=lirePanier();
       if(!pn.length){pe.innerHTML='<p>Votre panier est vide.</p><a class="btn" href="boutique.html">Voir la boutique</a>';return}
-      var sous=0,poids=0;pn.forEach(function(l){sous+=l.prix*l.qte;poids+=(l.poids||0)*l.qte});
-      var trop=!retrait&&poids>1000,port=retrait?0:(poids<=500?2:4),total=sous+(trop?0:port);
+      var sous=0;pn.forEach(function(l){sous+=l.prix*l.qte});
+      var port=retrait?0:4,total=sous+port;
       pe.innerHTML='<table class="tbl"><thead><tr><th>Article</th><th>Prix</th><th>Qté</th><th></th></tr></thead><tbody>'+
         pn.map(function(l,i){return '<tr><td>'+esc(l.nom)+'</td><td>'+fmt(l.prix)+'</td><td><button class="q" data-a="m" data-i="'+i+'">−</button> '+l.qte+' <button class="q" data-a="p" data-i="'+i+'">+</button></td><td><button class="q" data-a="x" data-i="'+i+'" title="Retirer">✕</button></td></tr>'}).join("")+
         '</tbody></table>'+
-        '<p><label><input type="radio" name="liv" value="mr"'+(retrait?'':' checked')+'> Livraison Mondial Relay (jusqu’à 500 g : 2 € / 500 g à 1 kg : 4 €)</label><br>'+
-        '<label><input type="radio" name="liv" value="at"'+(retrait?' checked':'')+'> Retrait à l’atelier (gratuit)</label></p>'+
-        '<p>Sous-total : '+fmt(sous)+'<br>Livraison : '+(trop?'à calculer (plus d’1 kg)':fmt(port))+'<br><strong>Total : '+fmt(total)+(trop?' + livraison':'')+'</strong></p>'+
-        (trop?'<p class="muted">Au-delà d’1 kg, contactez-moi pour les frais de livraison : choisissez le règlement par chèque ci-dessous ou écrivez-moi via l’onglet Contact.</p>':'')+
-        '<div class="row">'+(trop?'':'<button class="btn" id="paypal">Payer par carte ou PayPal</button>')+'<button class="btn alt" id="cheque">Commander et payer par chèque</button></div>'+
-        '<p class="muted">Paiement sécurisé par Paypal : vous pouvez régler par carte bancaire sans avoir de compte PayPal.</p>';
+        '<p><label><input type="radio" name="liv" value="mr"'+(retrait?'':' checked')+'> Livraison Mondial Relay : 4 €</label><br>'+
+        '<label><input type="radio" name="liv" value="at"'+(retrait?' checked':'')+'> Retrait directement à l’atelier : gratuit</label></p>'+
+        '<p>Sous-total : '+fmt(sous)+'<br>Livraison : '+fmt(port)+'<br><strong>Total : '+fmt(total)+'</strong></p>'+
+        '<div class="row"><button class="btn" id="paypal">Payer par carte ou PayPal</button>'+'<button class="btn alt" id="cheque">Commander et payer par chèque</button></div>'+
+        '<p class="muted">Paiement sécurisé via Paypal : vous pouvez régler par carte bancaire (CB) sans avoir de compte PayPal.</p>';
       pe.querySelectorAll('input[name=liv]').forEach(function(r){r.onchange=function(){retrait=r.value==="at";rendrePanier()}});
       pe.querySelectorAll(".q").forEach(function(b){b.onclick=function(){
         var p=lirePanier(),i=+b.dataset.i;
@@ -110,7 +109,7 @@
         document.body.appendChild(f);f.submit()};
       document.getElementById("cheque").onclick=function(){
         var lignes=pn.map(function(l){return "- "+l.qte+" x "+l.nom+" ("+fmt(l.prix)+")"}).join("\n");
-        location.href="mailto:"+CONFIG.contact+"?subject="+encodeURIComponent("Commande (règlement par chèque)")+"&body="+encodeURIComponent("Bonjour,\nJe souhaite commander :\n"+lignes+"\n\nSous-total : "+fmt(sous)+"\nLivraison : "+(retrait?"retrait à l’atelier":trop?"à calculer":fmt(port))+"\n\nMon nom et mon adresse (ou point Mondial Relay) :\n")}
+        location.href="mailto:"+CONFIG.contact+"?subject="+encodeURIComponent("Commande (règlement par chèque)")+"&body="+encodeURIComponent("Bonjour,\nJe souhaite commander :\n"+lignes+"\n\nSous-total : "+fmt(sous)+"\nLivraison : "+(retrait?"retrait à l’atelier":fmt(port))+"\n\nMon nom et mon adresse (ou point Mondial Relay) :\n")}
     };
     rendrePanier();
   }
