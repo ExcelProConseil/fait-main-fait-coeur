@@ -44,15 +44,20 @@
     if(!c.supabaseUrl||c.supabaseUrl.indexOf("A-REMPLACER")>=0)return Promise.resolve(PRODUITS);
     return fetch(c.supabaseUrl+"/rest/v1/produits?select=*&order=ordre.asc,created_at.asc",{headers:{apikey:c.supabaseKey}})
       .then(function(r){return r.ok?r.json():Promise.reject()})
-      .then(function(rows){return rows.map(function(r){return {nom:r.nom,prix:r.prix,image:r.image_url||"",description:r.description||"",categorie:r.categorie||"",id:r.id,poids:r.poids||0}})})
+      .then(function(rows){return rows.map(function(r){return {nom:r.nom,prix:r.prix,image:r.image_url||"",description:r.description||"",categorie:r.categorie||"",id:r.id,variantes:Array.isArray(r.variantes)?r.variantes:[]}})})
       .catch(function(){return null});
   }
   function carte(p){
+    var vs=p.variantes||[];
     var action=p.prix==null
       ? '<a class="btn" href="contact.html?produit='+encodeURIComponent(p.nom)+'">Demander un prix</a>'
-      : '<button class="btn add" data-i="'+LISTE.indexOf(p)+'">Ajouter au panier</button>';
-    var img=p.image?'<img src="'+esc(p.image)+'" alt="'+esc(p.nom)+'" onerror="this.remove()">':'';
-    return '<article class="card"><div class="img">'+img+'</div><div class="body"><h3>'+esc(p.nom)+'</h3><p>'+esc(p.description)+'</p><div class="prix">'+(p.prix==null?'Prix sur demande':String(p.prix).replace(".",",")+' €')+'</div>'+action+'</div></article>';
+      : '<button class="btn add">Ajouter au panier</button>';
+    var photo=vs.length?vs[0].image_url:p.image;
+    var img=photo?'<img src="'+esc(photo)+'" alt="'+esc(p.nom)+'" onerror="this.remove()">':'';
+    var vars=vs.length?'<div class="vars">'+vs.map(function(v,k){
+      return '<button type="button" class="vari'+(k?'':' sel')+'" data-k="'+k+'" title="'+esc(v.nom)+'"><img src="'+esc(v.image_url)+'" alt="'+esc(v.nom)+'"><span>'+esc(v.nom)+'</span></button>';
+    }).join("")+'</div>':'';
+    return '<article class="card" data-i="'+LISTE.indexOf(p)+'" data-v="0"><div class="img">'+img+'</div><div class="body"><h3>'+esc(p.nom)+'</h3><p>'+esc(p.description)+'</p>'+vars+'<div class="prix">'+(p.prix==null?'Prix sur demande':String(p.prix).replace(".",",")+' €')+'</div>'+action+'</div></article>';
   }
   if(el){
     Promise.all([charger(),UP]).then(function(res){
@@ -67,9 +72,20 @@
       var autres=liste.filter(function(p){return !CATS.some(function(c){return c.id===p.categorie})});
       if(autres.length)html+='<section id="autres"><h2>Autres confections</h2><div class="grid">'+autres.map(carte).join("")+'</div></section>';
       el.innerHTML=html;
-      el.onclick=function(e){var b=e.target.closest(".add");if(!b)return;
-        var p=LISTE[+b.dataset.i],pn=lirePanier(),l=pn.filter(function(x){return x.id===p.id})[0];
-        if(l)l.qte++;else pn.push({id:p.id,nom:p.nom,prix:p.prix,poids:p.poids||0,qte:1});
+      el.onclick=function(e){
+        var vb=e.target.closest(".vari");
+        if(vb){
+          var art=vb.closest("article"),p=LISTE[+art.dataset.i],k=+vb.dataset.k;
+          art.dataset.v=k;
+          art.querySelectorAll(".vari").forEach(function(x){x.classList.toggle("sel",x===vb)});
+          var im=art.querySelector(".img img");if(im)im.src=p.variantes[k].image_url;
+          return;
+        }
+        var b=e.target.closest(".add");if(!b)return;
+        var art2=b.closest("article"),p2=LISTE[+art2.dataset.i],v=(p2.variantes||[])[+art2.dataset.v];
+        var cle=v?p2.id+"|"+v.nom:p2.id,nom=v?p2.nom+" – "+v.nom:p2.nom;
+        var pn=lirePanier(),l=pn.filter(function(x){return x.id===cle})[0];
+        if(l)l.qte++;else pn.push({id:cle,nom:nom,prix:p2.prix,qte:1});
         ecrirePanier(pn);b.textContent="Ajouté ✔";setTimeout(function(){b.textContent="Ajouter au panier"},1500)};
       if(location.hash){var t=document.getElementById(location.hash.slice(1));if(t)t.scrollIntoView()}
     });

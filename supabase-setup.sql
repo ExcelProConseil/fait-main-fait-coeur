@@ -51,3 +51,6 @@ insert into public.univers (id) values ('bebes'),('enfants'),('adultes'),('maiso
 
 -- ===== Ajout : titres modifiables des 6 catégories =====
 alter table public.univers add column if not exists titre text not null default '';
+
+-- ===== Ajout : variantes (couleurs) d'un produit =====
+alter table public.produits add column if not exists variantes jsonb not null default '[]'::jsonb;

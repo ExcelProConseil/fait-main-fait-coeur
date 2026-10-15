@@ -82,28 +82,52 @@ function rendu(){
     f.onchange=function(){if(f.files[0])ap.src=URL.createObjectURL(f.files[0])};
     var lp=document.createElement("label");lp.textContent="Photo";d.appendChild(lp);
     var r0=document.createElement("div");r0.className="row";r0.appendChild(ap);r0.appendChild(f);d.appendChild(r0);
+    var vars=(p.variantes||[]).map(function(x){return {nom:x.nom,image_url:x.image_url,file:null}});
+    var lv=document.createElement("label");lv.textContent="Variantes (par exemple les couleurs) : une photo et un nom par variante. Laissez vide s'il n'y en a pas.";d.appendChild(lv);
+    var zv=document.createElement("div");d.appendChild(zv);
+    var rv=function(){
+      zv.innerHTML="";
+      vars.forEach(function(v,k){
+        var ligne=document.createElement("div");ligne.className="row";
+        var im=document.createElement("img");im.className="apercu";im.style.width="70px";im.style.height="52px";im.alt="";if(v.image_url)im.src=v.image_url;
+        var nm=document.createElement("input");nm.placeholder="Nom (ex. Rouge)";nm.value=v.nom||"";nm.oninput=function(){v.nom=nm.value};
+        var fi=document.createElement("input");fi.type="file";fi.accept="image/*";
+        fi.onchange=function(){if(fi.files[0]){v.file=fi.files[0];im.src=URL.createObjectURL(fi.files[0])}};
+        var sp=btn("Retirer","danger",function(){vars.splice(k,1);rv()});
+        ligne.appendChild(im);ligne.appendChild(nm);ligne.appendChild(fi);ligne.appendChild(sp);zv.appendChild(ligne)});
+      zv.appendChild(btn("+ Ajouter une variante","small",function(){vars.push({nom:"",image_url:"",file:null});rv()}))};
+    rv();
     var r=document.createElement("div");r.className="row";
-    r.appendChild(btn("Enregistrer","",function(){enregistrer(p,nom,prix,desc,f,this,cat)}));
+    r.appendChild(btn("Enregistrer","",function(){enregistrer(p,nom,prix,desc,f,this,cat,vars)}));
     r.appendChild(btn("↑","small",function(){bouger(i,-1)}));
     r.appendChild(btn("↓","small",function(){bouger(i,1)}));
     r.appendChild(btn("Supprimer","danger",function(){supprimer(p)}));
     d.appendChild(r);L.appendChild(d)})}
 
-function enregistrer(p,nom,prix,desc,f,b,cat){
+function envoyerPhoto(fichier,prefixe){
+  return reduire(fichier).then(function(blob){
+    var chemin=prefixe+Date.now()+"-"+Math.random().toString(36).slice(2,8)+".jpg";
+    return sb.storage.from("photos").upload(chemin,blob,{contentType:"image/jpeg"}).then(function(r){
+      if(r.error)throw r.error;return sb.storage.from("photos").getPublicUrl(chemin).data.publicUrl})})}
+function urlsDe(p){return [p.image_url].concat((p.variantes||[]).map(function(v){return v.image_url})).filter(Boolean)}
+function nettoyer(urls){var c=urls.map(cheminPhoto).filter(Boolean);if(c.length)sb.storage.from("photos").remove(c)}
+
+function enregistrer(p,nom,prix,desc,f,b,cat,vars){
   var v=prix.value.trim().replace(",",".").replace(/\s?€/,"");
   if(!nom.value.trim()){msg("Le nom est obligatoire.",true);return}
   if(v!==""&&(isNaN(v)||Number(v)<0)){msg("Le prix doit être un nombre (ex. 14 ou 8,50).",true);return}
   b.disabled=true;b.textContent="Enregistrement…";
   var maj={nom:nom.value.trim(),prix:v===""?null:Number(v),description:desc.value.trim(),categorie:cat.value};
-  var vieux=p.image_url;
-  var etape=f.files[0]?reduire(f.files[0]).then(function(blob){
-      var chemin=Date.now()+"-"+Math.random().toString(36).slice(2,8)+".jpg";
-      return sb.storage.from("photos").upload(chemin,blob,{contentType:"image/jpeg"}).then(function(r){
-        if(r.error)throw r.error;maj.image_url=sb.storage.from("photos").getPublicUrl(chemin).data.publicUrl})})
-    :Promise.resolve();
-  etape.then(function(){return sb.from("produits").update(maj).eq("id",p.id)}).then(function(r){
+  var avant=urlsDe(p);
+  var chaine=Promise.resolve();
+  if(f.files[0])chaine=chaine.then(function(){return envoyerPhoto(f.files[0],"")}).then(function(u){maj.image_url=u});
+  vars.forEach(function(x){if(x.file)chaine=chaine.then(function(){return envoyerPhoto(x.file,"var-")}).then(function(u){x.image_url=u;x.file=null})});
+  chaine.then(function(){
+    maj.variantes=vars.filter(function(x){return x.nom.trim()||x.image_url}).map(function(x){return {nom:x.nom.trim()||"Variante",image_url:x.image_url||""}});
+    return sb.from("produits").update(maj).eq("id",p.id)}).then(function(r){
     if(r.error)throw r.error;
-    if(maj.image_url&&vieux){var c=cheminPhoto(vieux);if(c)sb.storage.from("photos").remove([c])}
+    var apres=[maj.image_url||p.image_url].concat(maj.variantes.map(function(x){return x.image_url}));
+    nettoyer(avant.filter(function(u){return apres.indexOf(u)<0}));
     msg("Enregistré ✔ Le site est à jour.");return charger()
   }).catch(function(){msg("Échec de l'enregistrement. Réessayez.",true);b.disabled=false;b.textContent="Enregistrer"})}
 
@@ -111,7 +135,7 @@ function supprimer(p){
   if(!confirm("Supprimer « "+p.nom+" » du site ? Cette action est définitive."))return;
   sb.from("produits").delete().eq("id",p.id).then(function(r){
     if(r.error){msg("Suppression impossible.",true);return}
-    var c=p.image_url&&cheminPhoto(p.image_url);if(c)sb.storage.from("photos").remove([c]);
+    nettoyer(urlsDe(p));
     msg("Produit supprimé.");charger()})}
 
 function bouger(i,s){var j=i+s;if(j<0||j>=produits.length)return;
