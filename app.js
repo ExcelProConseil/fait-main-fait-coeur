@@ -117,7 +117,7 @@
         ecrirePanier(p.filter(function(l){return l.qte>0}));rendrePanier()}});
       var pp=document.getElementById("paypal");
       if(pp)pp.onclick=function(){
-        if(!CONFIG.paypal||CONFIG.paypal.indexOf("A-REMPLACER")>=0){alert("Le paiement en ligne n’est pas encore activé. Merci de choisir le paiement par chèque.");return}
+        if(!CONFIG.paypal||CONFIG.paypal.indexOf("A-REMPLACER")>=0){alert("Le paiement en ligne n’est pas encore disponible. Merci de réessayer plus tard ou de me contacter via l’onglet Contact.");return}
         var f=document.createElement("form");f.method="post";f.action="https://www.paypal.com/cgi-bin/webscr";
         var champs={cmd:"_cart",upload:"1",business:CONFIG.paypal,currency_code:"EUR",charset:"utf-8",lc:"FR",handling_cart:port.toFixed(2),
           "return":location.origin+location.pathname.replace("panier.html","merci.html"),cancel_return:location.href};
