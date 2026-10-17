@@ -1,7 +1,7 @@
 // Réglages du site. Les produits sont gérés depuis admin.html (Supabase).
 // La liste PRODUITS ci-dessous ne sert que tant que Supabase n'est pas configuré.
 window.CONFIG = {
-  paypal: "A-REMPLACER@exemple.fr",   // adresse e-mail de votre compte PayPal
+  paypal: "FaitmainFaitcoeur@outlook.fr",   // adresse e-mail du compte PayPal
   contact: "FaitmainFaitcoeur@outlook.fr",  // adresse qui reçoit les messages
   supabaseUrl: "https://hzcmrxhntcnchkxeqrht.supabase.co",         // Supabase > Project Settings > API > Project URL
   supabaseKey: "sb_publishable_r3O6Zi5OxsBZhKP3cldEKw_fpj7SPfV"          // clé "anon public" (publique par conception)
