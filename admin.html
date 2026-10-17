@@ -6,7 +6,7 @@
 label{font-size:.9rem;color:var(--muted)}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .small{background:var(--muted)}.danger{background:#b3261e}.apercu{width:140px;height:105px;object-fit:cover;border-radius:8px;background:var(--accent2)}
 #msg{position:sticky;top:0;padding:10px;border-radius:8px;background:var(--accent2);margin:8px 0;display:none}
-#login{max-width:360px}</style></head>
+#login{max-width:360px}.poignee{cursor:grab;background:var(--accent2);padding:6px 10px;border-radius:8px;text-align:center;user-select:none;font-size:.85rem}.cible{outline:2px dashed var(--accent)}.glisse{opacity:.5}</style></head>
 <body><header></header><main>
 <h1>Administration</h1>
 <div id="msg"></div>
@@ -70,6 +70,14 @@ function rendu(){
   if(!produits.length)L.textContent="Aucun produit. Cliquez sur « Ajouter un produit ».";
   produits.forEach(function(p,i){
     var d=document.createElement("div");d.className="prod";
+    var poi=document.createElement("div");poi.className="poignee";poi.textContent="☰ Glisser pour déplacer";poi.title="Glissez ce bandeau pour changer l'ordre";
+    poi.onmousedown=function(){d.draggable=true};poi.onmouseup=function(){d.draggable=false};
+    d.ondragstart=function(e){e.dataTransfer.setData("text/plain",String(i));e.dataTransfer.effectAllowed="move";d.classList.add("glisse")};
+    d.ondragend=function(){d.draggable=false;d.classList.remove("glisse")};
+    d.ondragover=function(e){e.preventDefault();d.classList.add("cible")};
+    d.ondragleave=function(){d.classList.remove("cible")};
+    d.ondrop=function(e){e.preventDefault();d.classList.remove("cible");deplacer(+e.dataTransfer.getData("text/plain"),i)};
+    d.appendChild(poi);
     var nom=document.createElement("input");nom.value=p.nom;champ(d,"Nom",nom);
     var prix=document.createElement("input");prix.inputMode="decimal";prix.value=p.prix==null?"":String(p.prix).replace(".",",");
     champ(d,"Prix en € (laissez vide pour « prix sur demande »)",prix);
@@ -99,8 +107,6 @@ function rendu(){
     rv();
     var r=document.createElement("div");r.className="row";
     r.appendChild(btn("Enregistrer","",function(){enregistrer(p,nom,prix,desc,f,this,cat,vars)}));
-    r.appendChild(btn("↑","small",function(){bouger(i,-1)}));
-    r.appendChild(btn("↓","small",function(){bouger(i,1)}));
     r.appendChild(btn("Supprimer","danger",function(){supprimer(p)}));
     d.appendChild(r);L.appendChild(d)})}
 
@@ -138,13 +144,14 @@ function supprimer(p){
     nettoyer(urlsDe(p));
     msg("Produit supprimé.");charger()})}
 
-function bouger(i,s){var j=i+s;if(j<0||j>=produits.length)return;
-  var ordre=produits.map(function(_,k){return k+1});var t=ordre[i];ordre[i]=ordre[j];ordre[j]=t;
-  Promise.all(produits.map(function(p,k){return sb.from("produits").update({ordre:ordre[k]}).eq("id",p.id)})).then(charger)}
+function deplacer(de,vers){
+  if(isNaN(de)||de===vers)return;
+  var x=produits.splice(de,1)[0];produits.splice(vers,0,x);
+  Promise.all(produits.map(function(p,k){return p.ordre===k+1?null:sb.from("produits").update({ordre:k+1}).eq("id",p.id)}).filter(Boolean)).then(function(){msg("Ordre enregistré ✔");charger()})}
 
 $("ajout").onclick=function(){
-  var max=produits.reduce(function(m,p){return Math.max(m,p.ordre)},0);
-  sb.from("produits").insert({nom:"Nouveau produit",ordre:max+1,categorie:""}).then(function(r){
+  var min=produits.reduce(function(m,p){return Math.min(m,p.ordre)},1);
+  sb.from("produits").insert({nom:"Nouveau produit",ordre:min-1,categorie:""}).then(function(r){
     if(r.error){msg("Ajout impossible.",true);return}
     msg("Produit ajouté : remplissez-le puis enregistrez.");charger()})};
 

@@ -108,7 +108,7 @@
         '<p><label><input type="radio" name="liv" value="mr"'+(retrait?'':' checked')+'> Livraison Mondial Relay : 4 €</label><br>'+
         '<label><input type="radio" name="liv" value="at"'+(retrait?' checked':'')+'> Retrait directement à l’atelier : gratuit</label></p>'+
         '<p>Sous-total : '+fmt(sous)+'<br>Livraison : '+fmt(port)+'<br><strong>Total : '+fmt(total)+'</strong></p>'+
-        '<div class="row"><button class="btn" id="paypal">Payer par carte ou PayPal</button>'+'<button class="btn alt" id="cheque">Commander et payer par chèque</button></div>'+
+        '<div class="row"><button class="btn" id="paypal">Payer par carte ou PayPal</button>'+'</div>'+
         '<p class="muted">Paiement sécurisé via Paypal : vous pouvez régler par carte bancaire (CB) sans avoir de compte PayPal.</p>';
       pe.querySelectorAll('input[name=liv]').forEach(function(r){r.onchange=function(){retrait=r.value==="at";rendrePanier()}});
       pe.querySelectorAll(".q").forEach(function(b){b.onclick=function(){
@@ -124,9 +124,6 @@
         pn.forEach(function(l,i){champs["item_name_"+(i+1)]=l.nom;champs["amount_"+(i+1)]=l.prix.toFixed(2);champs["quantity_"+(i+1)]=l.qte});
         Object.keys(champs).forEach(function(k){var i=document.createElement("input");i.type="hidden";i.name=k;i.value=champs[k];f.appendChild(i)});
         document.body.appendChild(f);f.submit()};
-      document.getElementById("cheque").onclick=function(){
-        var lignes=pn.map(function(l){return "- "+l.qte+" x "+l.nom+" ("+fmt(l.prix)+")"}).join("\n");
-        location.href="mailto:"+CONFIG.contact+"?subject="+encodeURIComponent("Commande (règlement par chèque)")+"&body="+encodeURIComponent("Bonjour,\nJe souhaite commander :\n"+lignes+"\n\nSous-total : "+fmt(sous)+"\nLivraison : "+(retrait?"retrait à l’atelier":fmt(port))+"\n\nMon nom et mon adresse (ou point Mondial Relay) :\n")}
     };
     rendrePanier();
   }
