@@ -8,7 +8,7 @@
 
 
   // ----- Panier (mémorisé dans le navigateur du client) -----
-  function lirePanier(){try{return JSON.parse(localStorage.getItem("fmfc_panier"))||[]}catch(e){return []}}
+  function lirePanier(){try{return (JSON.parse(localStorage.getItem("fmfc_panier"))||[]).map(function(l){l.qte=1;return l})}catch(e){return []}}
   function ecrirePanier(p){try{localStorage.setItem("fmfc_panier",JSON.stringify(p))}catch(e){}majBadge()}
   function majBadge(){var n=lirePanier().reduce(function(s,l){return s+l.qte},0),b=document.getElementById("nb-panier");if(b)b.textContent=n}
   majBadge();
@@ -85,7 +85,8 @@
         var art2=b.closest("article"),p2=LISTE[+art2.dataset.i],v=(p2.variantes||[])[+art2.dataset.v];
         var cle=v?p2.id+"|"+v.nom:p2.id,nom=v?p2.nom+" – "+v.nom:p2.nom;
         var pn=lirePanier(),l=pn.filter(function(x){return x.id===cle})[0];
-        if(l)l.qte++;else pn.push({id:cle,nom:nom,prix:p2.prix,qte:1});
+        if(l){b.textContent="Déjà dans votre panier (pièce unique)";setTimeout(function(){b.textContent="Ajouter au panier"},2500);return}
+        pn.push({id:cle,nom:nom,prix:p2.prix,qte:1});
         ecrirePanier(pn);b.textContent="Ajouté ✔";setTimeout(function(){b.textContent="Ajouter au panier"},1500)};
       if(location.hash){var t=document.getElementById(location.hash.slice(1));if(t)t.scrollIntoView()}
     });
@@ -101,8 +102,8 @@
       if(!pn.length){pe.innerHTML='<p>Votre panier est vide.</p><a class="btn" href="boutique.html">Voir la boutique</a>';return}
       var sous=0;pn.forEach(function(l){sous+=l.prix*l.qte});
       var port=retrait?0:4,total=sous+port;
-      pe.innerHTML='<table class="tbl"><thead><tr><th>Article</th><th>Prix</th><th>Qté</th><th></th></tr></thead><tbody>'+
-        pn.map(function(l,i){return '<tr><td>'+esc(l.nom)+'</td><td>'+fmt(l.prix)+'</td><td><button class="q" data-a="m" data-i="'+i+'">−</button> '+l.qte+' <button class="q" data-a="p" data-i="'+i+'">+</button></td><td><button class="q" data-a="x" data-i="'+i+'" title="Retirer">✕</button></td></tr>'}).join("")+
+      pe.innerHTML='<table class="tbl"><thead><tr><th>Article</th><th>Prix</th><th></th></tr></thead><tbody>'+
+        pn.map(function(l,i){return '<tr><td>'+esc(l.nom)+'</td><td>'+fmt(l.prix)+'</td><td><button class="q" data-a="x" data-i="'+i+'" title="Retirer">✕</button></td></tr>'}).join("")+
         '</tbody></table>'+
         '<p><label><input type="radio" name="liv" value="mr"'+(retrait?'':' checked')+'> Livraison Mondial Relay : 4 €</label><br>'+
         '<label><input type="radio" name="liv" value="at"'+(retrait?' checked':'')+'> Retrait directement à l’atelier : gratuit</label></p>'+
