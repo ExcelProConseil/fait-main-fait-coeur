@@ -43,3 +43,4 @@ section h2{margin-top:40px}
 .intro-row{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
 .intro-row>p{flex:1 1 320px;margin:16px 0}
 .intro-row .contact-box{flex:0 1 300px}
+@media(min-width:1500px){.contact-box{position:fixed;right:24px;top:130px;width:calc((100vw - 1000px)/2 - 56px);max-width:none;margin:0;z-index:5}.intro-row .contact-box{flex:none}}
