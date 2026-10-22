@@ -39,3 +39,7 @@ section h2{margin-top:40px}
 .hero p.hero-sub{font-size:1.1rem;font-style:italic;color:var(--muted);margin:4px 0 20px}
 .contact-box{display:block;border:2px solid var(--accent);border-radius:14px;padding:18px;text-align:center;text-decoration:none;color:var(--text);margin:24px 0;background:var(--card)}
 .contact-box:hover{background:var(--accent2)}
+.contact-box{max-width:300px;margin:16px 0 16px auto}
+.intro-row{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+.intro-row>p{flex:1 1 320px;margin:16px 0}
+.intro-row .contact-box{flex:0 1 300px}
