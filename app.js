@@ -32,7 +32,7 @@
   if(un){
     UP.then(function(rows){
       un.innerHTML=fusion(rows).map(function(c){
-        return '<a class="card cadre" href="boutique.html#'+c.id+'"><div class="img"><img src="'+esc(c.image)+'" alt="" onerror="this.remove()"></div><div class="body"><h3>'+esc(c.titre)+'</h3>'+(c.texte?'<p>'+esc(c.texte)+'</p>':'')+'</div></a>';
+        return '<a class="card cadre" href="boutique.html#'+c.id+'"><div class="img"><img src="'+esc(c.image)+'" alt="'+esc(c.titre)+'" onerror="this.remove()"></div><div class="body"><h3>'+esc(c.titre)+'</h3>'+(c.texte?'<p>'+esc(c.texte)+'</p>':'')+'</div></a>';
       }).join("");
     });
   }
@@ -72,6 +72,13 @@
       var autres=liste.filter(function(p){return !CATS.some(function(c){return c.id===p.categorie})});
       if(autres.length)html+='<section id="autres"><h2>Autres confections</h2><div class="grid">'+autres.map(carte).join("")+'</div></section>';
       el.innerHTML=html;
+      var ld=liste.filter(function(p){return p.prix!=null}).map(function(p){
+        var v=(p.variantes||[])[0];
+        return {"@type":"Product",name:p.nom,description:p.description||p.nom,image:(v&&v.image_url)||p.image||undefined,
+          brand:{"@type":"Brand",name:"FAIT MAIN FAIT CŒUR"},
+          offers:{"@type":"Offer",price:Number(p.prix).toFixed(2),priceCurrency:"EUR",availability:"https://schema.org/InStock",url:location.origin+"/boutique.html"}};
+      });
+      if(ld.length){var sc=document.createElement("script");sc.type="application/ld+json";sc.textContent=JSON.stringify({"@context":"https://schema.org","@graph":ld});document.head.appendChild(sc)}
       el.onclick=function(e){
         var vb=e.target.closest(".vari");
         if(vb){
