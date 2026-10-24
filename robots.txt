@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Sitemap: https://excelproconseil.github.io/fait-main-fait-coeur/sitemap.xml
+Sitemap: https://faitmainfaitcoeur.fr/sitemap.xml
