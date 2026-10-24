@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Commandes — FAIT MAIN FAIT CŒUR</title>
+<link rel="stylesheet" href="style.css">
+<style>
+main{max-width:1250px}
+.barre{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}
+.f{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:999px;padding:6px 14px;cursor:pointer;font:inherit}
+.f.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.small{background:var(--muted)}
+#msg{position:sticky;top:0;padding:10px;border-radius:8px;background:var(--accent2);margin:8px 0;display:none}
+#login{max-width:360px}
+.tbl.cmd td,.tbl.cmd th{vertical-align:top;font-size:.9rem}
+.tbl.cmd input,.tbl.cmd textarea,.tbl.cmd select{width:100%;min-width:120px;padding:6px;font-size:.85rem}
+.wrap{overflow-x:auto}
+.st-att{color:#a15c00}.st-pay{color:#1a6e2e}.st-exp{color:#0b57d0}.st-ann{color:#8a8a8a}
+.ref{font-family:monospace;font-weight:bold}
+</style></head>
+<body><header></header><main>
+<h1>Commandes</h1>
+<div id="msg"></div>
+<p id="config-ko" style="display:none">Supabase n'est pas encore configuré.</p>
+
+<form id="login" style="display:none">
+  <p>Connectez-vous pour gérer les commandes.</p>
+  <input id="email" type="email" placeholder="E-mail" autocomplete="username" required>
+  <input id="mdp" type="password" placeholder="Mot de passe" autocomplete="current-password" required>
+  <button class="btn">Se connecter</button>
+</form>
+
+<section id="app" style="display:none">
+  <div class="barre">
+    <a class="btn small" href="admin.html">← Produits</a>
+    <button class="btn small" id="rafraichir">Actualiser</button>
+    <button class="btn small" id="export">Exporter (Excel)</button>
+    <button class="btn small" id="quitter">Se déconnecter</button>
+  </div>
+  <div class="barre" id="filtres"></div>
+  <p class="muted" id="compte"></p>
+  <p class="muted">Quand un client clique sur « Payer », la commande est enregistrée ici avec le statut « En attente de paiement ». Vérifiez dans votre e-mail ou votre compte PayPal que le paiement est bien arrivé (la <strong>référence</strong> apparaît dans PayPal comme « numéro de facture »), puis passez-la en « Payée ». Les clients qui n'ont pas payé restent « En attente » : vous pouvez les supprimer.</p>
+  <div class="wrap"><table class="tbl cmd"><thead><tr>
+    <th>Date</th><th>Référence</th><th>Articles</th><th>Total</th><th>Livraison</th><th>Statut</th><th>Client</th><th>Adresse</th><th>Note</th><th></th>
+  </tr></thead><tbody id="corps"></tbody></table></div>
+</section>
+</main><footer></footer>
+<script src="produits.js"></script><script src="app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+var $=function(i){return document.getElementById(i)};
+function msg(t,err){var m=$("msg");m.textContent=t;m.style.display="block";m.style.background=err?"#f9dedc":"";m.style.color=err?"#410e0b":"";clearTimeout(msg.t);msg.t=setTimeout(function(){m.style.display="none"},5000)}
+var STATUTS=["En attente de paiement","Payée","Expédiée","Annulée"];
+var CLASSES={"En attente de paiement":"st-att","Payée":"st-pay","Expédiée":"st-exp","Annulée":"st-ann"};
+var C=window.CONFIG,sb=null,cmds=[],filtre="Toutes";
+
+if(!C.supabaseUrl||C.supabaseUrl.indexOf("A-REMPLACER")>=0){$("config-ko").style.display="block"}
+else{sb=supabase.createClient(C.supabaseUrl,C.supabaseKey);
+  sb.auth.getSession().then(function(r){r.data.session?demarrer():$("login").style.display="block"})}
+
+$("login").onsubmit=function(e){e.preventDefault();
+  sb.auth.signInWithPassword({email:$("email").value.trim(),password:$("mdp").value}).then(function(r){
+    if(r.error){msg("E-mail ou mot de passe incorrect.",true);return}
+    $("login").style.display="none";demarrer()})};
+$("quitter").onclick=function(){sb.auth.signOut().then(function(){location.reload()})};
+$("rafraichir").onclick=function(){charger()};
+
+function demarrer(){$("app").style.display="block";filtres();charger()}
+function filtres(){
+  var z=$("filtres");z.innerHTML="";
+  ["Toutes"].concat(STATUTS).forEach(function(s){
+    var b=document.createElement("button");b.className="f"+(s===filtre?" on":"");b.textContent=s;
+    b.onclick=function(){filtre=s;filtres();rendu()};z.appendChild(b)})}
+
+function charger(){
+  sb.from("commandes").select("*").order("created_at",{ascending:false}).then(function(r){
+    if(r.error){msg("Impossible de charger les commandes (la commande SQL des commandes a-t-elle été exécutée ?).",true);return}
+    cmds=r.data;rendu()})}
+
+function euros(n){return Number(n).toFixed(2).replace(".",",")+" €"}
+function maj(c,champs){
+  return sb.from("commandes").update(champs).eq("id",c.id).then(function(r){
+    if(r.error){msg("Enregistrement impossible.",true);return false}
+    Object.keys(champs).forEach(function(k){c[k]=champs[k]});msg("Enregistré ✔");return true})}
+
+function cellule(tr){var td=document.createElement("td");tr.appendChild(td);return td}
+function champTexte(td,c,cle,multi){
+  var e=document.createElement(multi?"textarea":"input");if(multi)e.rows=3;e.value=c[cle]||"";
+  e.onchange=function(){var o={};o[cle]=e.value;maj(c,o)};td.appendChild(e)}
+
+function rendu(){
+  var corps=$("corps");corps.innerHTML="";
+  var l=cmds.filter(function(c){return filtre==="Toutes"||c.statut===filtre});
+  $("compte").textContent=l.length+" commande"+(l.length>1?"s":"")+(filtre==="Toutes"?"":" · "+filtre);
+  l.forEach(function(c){
+    var tr=document.createElement("tr");
+    cellule(tr).textContent=new Date(c.created_at).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"});
+    var tr2=cellule(tr);tr2.className="ref";tr2.textContent=c.reference;
+    var ta=cellule(tr);(c.articles||[]).forEach(function(a){var d=document.createElement("div");d.textContent="• "+a.nom+" ("+euros(a.prix)+")";ta.appendChild(d)});
+    var tt=cellule(tr);tt.textContent=euros(c.total);tt.title="Articles "+euros(c.sous_total)+" + livraison "+euros(c.livraison);
+    cellule(tr).textContent=c.mode_livraison;
+    var ts=cellule(tr);var s=document.createElement("select");s.className=CLASSES[c.statut]||"";
+    STATUTS.forEach(function(x){var o=document.createElement("option");o.value=x;o.textContent=x;s.appendChild(o)});
+    s.value=c.statut;
+    s.onchange=function(){maj(c,{statut:s.value}).then(function(ok){if(ok){s.className=CLASSES[s.value]||"";rendu()}})};
+    ts.appendChild(s);
+    champTexte(cellule(tr),c,"client",false);
+    champTexte(cellule(tr),c,"adresse",true);
+    champTexte(cellule(tr),c,"note",true);
+    var td=cellule(tr);var x=document.createElement("button");x.className="btn small";x.textContent="Supprimer";
+    x.onclick=function(){
+      if(!confirm("Supprimer définitivement la commande "+c.reference+" ?"))return;
+      sb.from("commandes").delete().eq("id",c.id).then(function(r){
+        if(r.error){msg("Suppression impossible.",true);return}
+        msg("Commande supprimée.");charger()})};
+    td.appendChild(x);
+    corps.appendChild(tr)})}
+
+$("export").onclick=function(){
+  var q=function(v){return '"'+String(v==null?"":v).replace(/"/g,'""')+'"'};
+  var lignes=[["Date","Référence","Articles","Sous-total","Livraison (€)","Total","Mode de livraison","Statut","Client","Adresse","Note"]];
+  cmds.forEach(function(c){lignes.push([new Date(c.created_at).toLocaleString("fr-FR"),c.reference,(c.articles||[]).map(function(a){return a.nom}).join(" + "),
+    c.sous_total,c.livraison,c.total,c.mode_livraison,c.statut,c.client,c.adresse,c.note])});
+  var csv="﻿"+lignes.map(function(r){return r.map(q).join(";")}).join("\r\n");
+  var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  a.download="commandes.csv";document.body.appendChild(a);a.click();a.remove()};
+</script></body></html>

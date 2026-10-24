@@ -54,3 +54,25 @@ alter table public.univers add column if not exists titre text not null default 
 
 -- ===== Ajout : variantes (couleurs) d'un produit =====
 alter table public.produits add column if not exists variantes jsonb not null default '[]'::jsonb;
+
+-- ===== Ajout : commandes =====
+create table if not exists public.commandes (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  reference text not null unique,
+  articles jsonb not null,
+  sous_total numeric(8,2) not null,
+  livraison numeric(8,2) not null,
+  total numeric(8,2) not null,
+  mode_livraison text not null,
+  statut text not null default 'En attente de paiement',
+  client text not null default '',
+  adresse text not null default '',
+  note text not null default ''
+);
+alter table public.commandes enable row level security;
+create policy "Commande par un client" on public.commandes for insert to anon, authenticated
+  with check (statut = 'En attente de paiement' and jsonb_typeof(articles) = 'array' and total >= 0);
+create policy "Commandes lecture connecte" on public.commandes for select to authenticated using (true);
+create policy "Commandes modif connecte" on public.commandes for update to authenticated using (true) with check (true);
+create policy "Commandes suppression connecte" on public.commandes for delete to authenticated using (true);

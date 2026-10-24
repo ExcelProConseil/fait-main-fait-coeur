@@ -119,11 +119,17 @@
       if(pp)pp.onclick=function(){
         if(!CONFIG.paypal||CONFIG.paypal.indexOf("A-REMPLACER")>=0){alert("Le paiement en ligne n’est pas encore disponible. Merci de réessayer plus tard ou de me contacter via l’onglet Contact.");return}
         var f=document.createElement("form");f.method="post";f.action="https://www.paypal.com/cgi-bin/webscr";
-        var champs={cmd:"_cart",upload:"1",business:CONFIG.paypal,currency_code:"EUR",charset:"utf-8",lc:"FR",handling_cart:port.toFixed(2),
+        var ref="FMFC-"+Date.now().toString(36).toUpperCase().slice(-5)+Math.random().toString(36).slice(2,5).toUpperCase();
+        var champs={invoice:ref,cmd:"_cart",upload:"1",business:CONFIG.paypal,currency_code:"EUR",charset:"utf-8",lc:"FR",handling_cart:port.toFixed(2),
           "return":location.origin+location.pathname.replace("panier.html","merci.html"),cancel_return:location.href};
         pn.forEach(function(l,i){champs["item_name_"+(i+1)]=l.nom;champs["amount_"+(i+1)]=l.prix.toFixed(2);champs["quantity_"+(i+1)]=l.qte});
         Object.keys(champs).forEach(function(k){var i=document.createElement("input");i.type="hidden";i.name=k;i.value=champs[k];f.appendChild(i)});
-        document.body.appendChild(f);f.submit()};
+        // on note la commande (statut « en attente de paiement »), sans jamais bloquer le paiement
+        var noter=fetch(CONFIG.supabaseUrl+"/rest/v1/commandes",{method:"POST",
+          headers:{apikey:CONFIG.supabaseKey,"Content-Type":"application/json",Prefer:"return=minimal"},
+          body:JSON.stringify({reference:ref,articles:pn.map(function(l){return {nom:l.nom,prix:l.prix}}),sous_total:sous,livraison:port,total:total,
+            mode_livraison:retrait?"Retrait à l’atelier":"Mondial Relay"})}).catch(function(){});
+        Promise.race([noter,new Promise(function(r){setTimeout(r,3000)})]).then(function(){document.body.appendChild(f);f.submit()})};
     };
     rendrePanier();
   }
