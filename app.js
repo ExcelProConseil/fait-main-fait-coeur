@@ -93,7 +93,7 @@
         var cle=v?p2.id+"|"+v.nom:p2.id,nom=v?p2.nom+" – "+v.nom:p2.nom;
         var pn=lirePanier(),l=pn.filter(function(x){return x.id===cle})[0];
         if(l){b.textContent="Déjà dans votre panier (pièce unique)";setTimeout(function(){b.textContent="Ajouter au panier"},2500);return}
-        pn.push({id:cle,nom:nom,prix:p2.prix,qte:1});
+        pn.push({id:cle,nom:nom,prix:p2.prix,qte:1,image:(v&&v.image_url)||p2.image||""});
         ecrirePanier(pn);b.textContent="Ajouté ✔";setTimeout(function(){b.textContent="Ajouter au panier"},1500)};
       if(location.hash){var t=document.getElementById(location.hash.slice(1));if(t)t.scrollIntoView()}
     });
@@ -134,7 +134,7 @@
         // on note la commande (statut « en attente de paiement »), sans jamais bloquer le paiement
         var noter=fetch(CONFIG.supabaseUrl+"/rest/v1/commandes",{method:"POST",
           headers:{apikey:CONFIG.supabaseKey,"Content-Type":"application/json",Prefer:"return=minimal"},
-          body:JSON.stringify({reference:ref,articles:pn.map(function(l){return {nom:l.nom,prix:l.prix}}),sous_total:sous,livraison:port,total:total,
+          body:JSON.stringify({reference:ref,articles:pn.map(function(l){return {nom:l.nom,prix:l.prix,image:l.image||""}}),sous_total:sous,livraison:port,total:total,
             mode_livraison:retrait?"Retrait à l’atelier":"Mondial Relay"})}).catch(function(){});
         Promise.race([noter,new Promise(function(r){setTimeout(r,3000)})]).then(function(){document.body.appendChild(f);f.submit()})};
     };

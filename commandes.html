@@ -95,7 +95,11 @@ function rendu(){
     var tr=document.createElement("tr");
     cellule(tr).textContent=new Date(c.created_at).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"});
     var tr2=cellule(tr);tr2.className="ref";tr2.textContent=c.reference;
-    var ta=cellule(tr);(c.articles||[]).forEach(function(a){var d=document.createElement("div");d.textContent="• "+a.nom+" ("+euros(a.prix)+")";ta.appendChild(d)});
+    var ta=cellule(tr);(c.articles||[]).forEach(function(a){
+      var d=document.createElement("div");d.style.cssText="display:flex;gap:8px;align-items:center;margin-bottom:6px";
+      if(a.image){var im=document.createElement("img");im.src=a.image;im.alt=a.nom;im.style.cssText="width:56px;height:56px;object-fit:cover;border-radius:6px;flex:none";
+        im.onerror=function(){im.remove()};d.appendChild(im)}
+      var t=document.createElement("span");t.textContent=a.nom+" ("+euros(a.prix)+")";d.appendChild(t);ta.appendChild(d)});
     var tt=cellule(tr);tt.textContent=euros(c.total);tt.title="Articles "+euros(c.sous_total)+" + livraison "+euros(c.livraison);
     cellule(tr).textContent=c.mode_livraison;
     var ts=cellule(tr);var s=document.createElement("select");s.className=CLASSES[c.statut]||"";
