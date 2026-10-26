@@ -31,14 +31,14 @@ main{max-width:1250px}
 
 <section id="app" style="display:none">
   <div class="barre">
-    <a class="btn small" href="admin.html">← Produits</a>
+    <a class="btn small" href="admin.html">← Produits</a><a class="btn small" href="statistiques.html">Statistiques →</a>
     <button class="btn small" id="rafraichir">Actualiser</button>
     <button class="btn small" id="export">Exporter (Excel)</button>
     <button class="btn small" id="quitter">Se déconnecter</button>
   </div>
   <div class="barre" id="filtres"></div>
   <p class="muted" id="compte"></p>
-  <p class="muted">Quand un client clique sur « Payer », la commande est enregistrée ici avec le statut « En attente de paiement ». Vérifiez dans votre e-mail ou votre compte PayPal que le paiement est bien arrivé (la <strong>référence</strong> apparaît dans PayPal comme « numéro de facture »), puis passez-la en « Payée ». Les clients qui n'ont pas payé restent « En attente » : vous pouvez les supprimer.</p>
+  <p class="muted">Quand un client clique sur « Payer », la commande est enregistrée ici avec le statut « En attente de paiement ». Vérifiez dans votre e-mail ou votre compte PayPal que le paiement est bien arrivé (la <strong>référence</strong> apparaît dans PayPal comme « numéro de facture »), puis passez-la en « Payée » : les articles sont alors marqués « Vendus » sur la boutique. Une commande « En attente » réserve les articles pendant 30 minutes ; en la passant en « Annulée » (ou en la supprimant), vous les libérez tout de suite. Les clients qui n'ont pas payé restent « En attente » : vous pouvez les supprimer.</p>
   <div class="wrap"><table class="tbl cmd"><thead><tr>
     <th>Date</th><th>Référence</th><th>Articles</th><th>Total</th><th>Livraison</th><th>Statut</th><th>Client</th><th>Adresse</th><th>Note</th><th></th>
   </tr></thead><tbody id="corps"></tbody></table></div>

@@ -12,7 +12,12 @@
   function ecrirePanier(p){try{localStorage.setItem("fmfc_panier",JSON.stringify(p))}catch(e){}majBadge()}
   function majBadge(){var n=lirePanier().reduce(function(s,l){return s+l.qte},0),b=document.getElementById("nb-panier");if(b)b.textContent=n}
   majBadge();
-  var LISTE=[];
+  var LISTE=[],DISPO={};
+  function jeton(){
+    try{var t=localStorage.getItem("fmfc_jeton");
+      if(!t){t=Array.prototype.map.call(crypto.getRandomValues(new Uint8Array(12)),function(b){return ("0"+b.toString(16)).slice(-2)}).join("");localStorage.setItem("fmfc_jeton",t)}
+      return t}catch(e){return Date.now().toString(36)+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)}
+  }
 
   // Accueil : les 6 univers
   // Titres, textes et photos des 6 univers (modifiables dans l'administration)
@@ -26,6 +31,24 @@
   var UP=(cf.supabaseUrl&&cf.supabaseUrl.indexOf("A-REMPLACER")<0)
     ? fetch(cf.supabaseUrl+"/rest/v1/univers?select=*",{headers:{apikey:cf.supabaseKey}}).then(function(r){return r.ok?r.json():[]}).catch(function(){return []})
     : Promise.resolve([]);
+
+  var OK=cf.supabaseUrl&&cf.supabaseUrl.indexOf("A-REMPLACER")<0;
+  var IP=OK
+    ? fetch(cf.supabaseUrl+"/rest/v1/indisponibles_publics?select=cle,etat",{headers:{apikey:cf.supabaseKey}}).then(function(r){return r.ok?r.json():[]}).catch(function(){return []})
+    : Promise.resolve([]);
+
+  // Compteur de visites : anonyme, sans cookie (page vue, date, site d'origine)
+  (function(){
+    try{
+      if(!OK||/^(admin|commandes|statistiques)/.test(cur)||cur==="404.html")return;
+      if(/bot|crawl|spider|slurp|headless|lighthouse|preview/i.test(navigator.userAgent)||navigator.webdriver)return;
+      for(var i=0;i<localStorage.length;i++){if(/^sb-.*-auth-token$/.test(localStorage.key(i)))return} // pas les visites d'Isabelle
+      var ref="";try{var u=new URL(document.referrer);if(u.hostname&&u.hostname!==location.hostname)ref=u.hostname.replace(/^www\./,"").slice(0,100)}catch(e){}
+      fetch(cf.supabaseUrl+"/rest/v1/visites",{method:"POST",keepalive:true,
+        headers:{apikey:cf.supabaseKey,"Content-Type":"application/json",Prefer:"return=minimal"},
+        body:JSON.stringify({page:cur||"index.html",ref:ref})}).catch(function(){});
+    }catch(e){}
+  })();
 
   // Accueil : les 6 univers
   var un=document.getElementById("univers");
@@ -47,21 +70,30 @@
       .then(function(rows){return rows.map(function(r){return {nom:r.nom,prix:r.prix,image:r.image_url||"",description:r.description||"",categorie:r.categorie||"",id:r.id,variantes:Array.isArray(r.variantes)?r.variantes:[]}})})
       .catch(function(){return null});
   }
+  function etatDe(cle){return DISPO[cle]||null}
   function carte(p){
     var vs=p.variantes||[];
+    var dispo=vs.length?vs.map(function(v){return etatDe(p.id+"|"+v.nom)}):[etatDe(p.id)];
+    var libre=-1;for(var q=0;q<dispo.length;q++){if(!dispo[q]){libre=q;break}}
+    var cour=libre<0?0:libre;
+    var tousVendus=libre<0&&dispo.every(function(d){return d==="vendu"});
     var action=p.prix==null
       ? '<a class="btn" href="contact.html?produit='+encodeURIComponent(p.nom)+'">Demander un prix</a>'
-      : '<button class="btn add">Ajouter au panier</button>';
-    var photo=vs.length?vs[0].image_url:p.image;
+      : libre<0
+        ? '<button class="btn" disabled>'+(tousVendus?'Vendu':'Réservé pour le moment')+'</button>'
+        : '<button class="btn add">Ajouter au panier</button>';
+    var photo=vs.length?vs[cour].image_url:p.image;
     var img=photo?'<img src="'+esc(photo)+'" alt="'+esc(p.nom)+'" onerror="this.remove()">':'';
     var vars=vs.length?'<div class="vars">'+vs.map(function(v,k){
-      return '<button type="button" class="vari'+(k?'':' sel')+'" data-k="'+k+'" title="'+esc(v.nom)+'"><img src="'+esc(v.image_url)+'" alt="'+esc(v.nom)+'"><span>'+esc(v.nom)+'</span></button>';
+      var d=dispo[k];
+      return '<button type="button" class="vari'+(k===cour?' sel':'')+(d?' indispo':'')+'" data-k="'+k+'"'+(d?' disabled':'')+' title="'+esc(v.nom)+(d?(d==="vendu"?' (vendu)':' (réservé)'):'')+'"><img src="'+esc(v.image_url)+'" alt="'+esc(v.nom)+'"><span>'+esc(v.nom)+(d?(d==="vendu"?'<br>vendu':'<br>réservé'):'')+'</span></button>';
     }).join("")+'</div>':'';
-    return '<article class="card" data-i="'+LISTE.indexOf(p)+'" data-v="0"><div class="img">'+img+'</div><div class="body"><h3>'+esc(p.nom)+'</h3><p>'+esc(p.description)+'</p>'+vars+'<div class="prix">'+(p.prix==null?'Prix sur demande':String(p.prix).replace(".",",")+' €')+'</div>'+action+'</div></article>';
+    return '<article class="card'+(libre<0?' indispo':'')+'" data-i="'+LISTE.indexOf(p)+'" data-v="'+cour+'"><div class="img">'+img+'</div><div class="body"><h3>'+esc(p.nom)+'</h3><p>'+esc(p.description)+'</p>'+vars+'<div class="prix">'+(p.prix==null?'Prix sur demande':String(p.prix).replace(".",",")+' €')+'</div>'+action+'</div></article>';
   }
   if(el){
-    Promise.all([charger(),UP]).then(function(res){
+    Promise.all([charger(),UP,IP]).then(function(res){
       var liste=res[0],CATS=fusion(res[1]);
+      DISPO={};(res[2]||[]).forEach(function(d){DISPO[d.cle]=d.etat});
       if(!liste){el.innerHTML="<p>La boutique est momentanément indisponible, merci de revenir plus tard.</p>";return}
       LISTE=liste;
       var html=CATS.map(function(c){
@@ -131,12 +163,19 @@
           "return":location.origin+location.pathname.replace("panier.html","merci.html"),cancel_return:location.href};
         pn.forEach(function(l,i){champs["item_name_"+(i+1)]=l.nom;champs["amount_"+(i+1)]=l.prix.toFixed(2);champs["quantity_"+(i+1)]=l.qte});
         Object.keys(champs).forEach(function(k){var i=document.createElement("input");i.type="hidden";i.name=k;i.value=champs[k];f.appendChild(i)});
-        // on note la commande (statut « en attente de paiement »), sans jamais bloquer le paiement
+        // on note et on réserve la commande ; seul un article indisponible bloque le paiement
+        var tk=jeton();
         var noter=fetch(CONFIG.supabaseUrl+"/rest/v1/commandes",{method:"POST",
           headers:{apikey:CONFIG.supabaseKey,"Content-Type":"application/json",Prefer:"return=minimal"},
-          body:JSON.stringify({reference:ref,articles:pn.map(function(l){return {nom:l.nom,prix:l.prix,image:l.image||""}}),sous_total:sous,livraison:port,total:total,
-            mode_livraison:retrait?"Retrait à l’atelier":"Mondial Relay"})}).catch(function(){});
-        Promise.race([noter,new Promise(function(r){setTimeout(r,3000)})]).then(function(){document.body.appendChild(f);f.submit()})};
+          body:JSON.stringify({reference:ref,token:tk,articles:pn.map(function(l){return {id:l.id,nom:l.nom,prix:l.prix,image:l.image||""}}),sous_total:sous,livraison:port,total:total,
+            mode_livraison:retrait?"Retrait à l’atelier":"Mondial Relay"})})
+          .then(function(r){return r.ok?null:r.json().catch(function(){return null})}).catch(function(){return null});
+        Promise.race([noter,new Promise(function(r){setTimeout(r,3000)})]).then(function(err){
+          if(err&&String(err.message||"").indexOf("INDISPONIBLE:")===0){
+            var cle=String(err.message).slice(13),p=lirePanier(),it=p.filter(function(l){return l.id===cle})[0];
+            alert("Désolée, « "+(it?it.nom:"un article")+" » vient d’être réservé ou vendu : c’est une pièce unique. Je le retire de votre panier.");
+            ecrirePanier(p.filter(function(l){return l.id!==cle}));rendrePanier();return}
+          document.body.appendChild(f);f.submit()})};
     };
     rendrePanier();
   }

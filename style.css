@@ -44,3 +44,10 @@ section h2{margin-top:40px}
 .intro-row>p{flex:1 1 320px;margin:16px 0}
 .intro-row .contact-box{flex:0 1 300px}
 @media(min-width:1500px){.contact-box{position:fixed;right:24px;top:130px;width:calc((100vw - 1000px)/2 - 56px);max-width:none;margin:0;z-index:5}.intro-row .contact-box{flex:none}}
+.card.indispo .img{filter:grayscale(.8);opacity:.6}
+.vari.indispo{opacity:.4;cursor:not-allowed}
+.btn[disabled]{background:var(--muted);cursor:not-allowed}
+.barre-stats{display:flex;align-items:flex-end;gap:3px;height:140px;margin:12px 0}
+.barre-stats div{flex:1;background:var(--accent);border-radius:3px 3px 0 0;min-height:2px;position:relative}
+.kpi{display:flex;gap:16px;flex-wrap:wrap}.kpi>div{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 20px;min-width:150px}
+.kpi b{display:block;font-size:1.8rem;color:var(--accent)}
