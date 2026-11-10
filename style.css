@@ -51,3 +51,11 @@ section h2{margin-top:40px}
 .barre-stats div{flex:1;background:var(--accent);border-radius:3px 3px 0 0;min-height:2px;position:relative}
 .kpi{display:flex;gap:16px;flex-wrap:wrap}.kpi>div{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 20px;min-width:150px}
 .kpi b{display:block;font-size:1.8rem;color:var(--accent)}
+html{scroll-behavior:smooth}
+section[id]{scroll-margin-top:90px}
+.cat-nav{display:flex;flex-direction:column;gap:6px;border:2px solid var(--accent);border-radius:14px;padding:14px 16px;background:var(--card);margin:16px 0;max-width:340px}
+.cat-nav:empty{display:none}
+.cat-nav strong{color:var(--accent);margin-bottom:4px}
+.cat-nav a{text-decoration:none;color:var(--text);padding:3px 0}
+.cat-nav a:hover{color:var(--accent);text-decoration:underline}
+@media(min-width:1500px){.cat-nav{position:fixed;left:24px;top:130px;width:calc((100vw - 1000px)/2 - 56px);max-width:none;margin:0;z-index:5}}

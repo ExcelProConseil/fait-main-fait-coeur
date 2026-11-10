@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Texte de la page À propos — FAIT MAIN FAIT CŒUR</title>
+<link rel="icon" type="image/png" href="images/favicon.png">
+<link rel="stylesheet" href="style.css">
+<style>
+.barre{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}
+.small{background:var(--muted)}
+#msg{position:sticky;top:0;padding:10px;border-radius:8px;background:var(--accent2);margin:8px 0;display:none}
+#login{max-width:360px}
+.deux{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px}
+textarea{width:100%;min-height:420px;line-height:1.5}
+#apercu{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:8px 18px}
+code{background:var(--accent2);padding:1px 5px;border-radius:4px}
+</style></head>
+<body><header></header><main>
+<h1>Texte de la page « À propos »</h1>
+<div id="msg"></div>
+<p id="config-ko" style="display:none">Supabase n'est pas encore configuré.</p>
+
+<form id="login" style="display:none">
+  <p>Connectez-vous pour modifier le texte.</p>
+  <input id="email" type="email" placeholder="E-mail" autocomplete="username" required>
+  <input id="mdp" type="password" placeholder="Mot de passe" autocomplete="current-password" required>
+  <button class="btn">Se connecter</button>
+</form>
+
+<section id="app" style="display:none">
+  <div class="barre">
+    <a class="btn small" href="admin.html">← Produits</a>
+    <a class="btn small" href="commandes.html">Commandes →</a>
+    <a class="btn small" href="statistiques.html">Statistiques →</a>
+    <button class="btn small" id="quitter">Se déconnecter</button>
+  </div>
+  <p>Modifiez le texte ci-dessous : l'aperçu à droite montre le résultat. La photo reste en bas de la page.</p>
+  <ul>
+    <li>Pour passer à un <strong>nouveau paragraphe</strong>, laissez une <strong>ligne vide</strong>.</li>
+    <li>Pour mettre en <strong>gras</strong> : <code>**texte**</code></li>
+    <li>Pour faire un <strong>lien</strong> : <code>[texte cliquable](https://adresse-du-lien)</code> (pour la page Contact : <code>[Contact](contact.html)</code>)</li>
+  </ul>
+  <div class="deux">
+    <div><textarea id="texte" aria-label="Texte de la page À propos"></textarea></div>
+    <div><div id="apercu"></div></div>
+  </div>
+  <div class="barre">
+    <button class="btn" id="enregistrer">Enregistrer</button>
+    <button class="btn small" id="origine">Rétablir le texte d'origine</button>
+    <a class="btn small" href="a-propos.html" target="_blank" rel="noopener">Voir la page</a>
+  </div>
+</section>
+</main><footer></footer>
+<script src="produits.js"></script><script src="app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+var DEFAUT="« Fait Main Fait Cœur » est un atelier de couture et de crochet né de ma passion pour le textile (tissus et fils en tout genre).\n\nToutes mes confections sont réalisées à partir de tissus certifiés Oeko-Tex (absence de substances nocives).\n\nCertaines peluches ne conviennent pas aux enfants de moins de 3 ans. Il s’agit d’objets de décorations comportant de petits éléments susceptibles d’être ingérés ou inhalés, présentant un risque d’étouffement ; cette mention est indiquée sur chaque peluche concernée.\n\nAussi, dans un souci de protection de l’environnement, « Fait Main Fait Cœur » réalise de nombreuses confections lavables et réutilisables (cotons démaquillants, lingettes bébés, filtres à café, sachets de thé, protections hygiéniques, éponges de cuisine…). C’est aussi pour vous l’occasion de ne pas jeter votre argent par la fenêtre et de faire de belles économies !\n\nToujours dans un souci environnemental, quelques confections peuvent être réalisées à partir de textiles recyclés ; cette mention est indiquée pour chaque produit concerné.\n\nComme à votre image, chaque confection est unique !\n\nVous souhaitez un coffret cadeau (naissance, anniversaire…), demandez-moi via l’onglet « [Contact](contact.html) ».\n\nVous pouvez me suivre sur [ma page Facebook](https://www.facebook.com/faitmainfaitcoeur.isa) pour connaître les dates des éventuelles portes ouvertes, les petits jeux concours...\n\nJe vous souhaite une bonne visite !\n\n**Isabelle, FAIT MAIN FAIT CŒUR**";
+var $=function(i){return document.getElementById(i)};
+function msg(t,err){var m=$("msg");m.textContent=t;m.style.display="block";m.style.background=err?"#f9dedc":"";m.style.color=err?"#410e0b":"";clearTimeout(msg.t);msg.t=setTimeout(function(){m.style.display="none"},5000)}
+var C=window.CONFIG,sb=null;
+if(!C.supabaseUrl||C.supabaseUrl.indexOf("A-REMPLACER")>=0){$("config-ko").style.display="block"}
+else{sb=supabase.createClient(C.supabaseUrl,C.supabaseKey);
+  sb.auth.getSession().then(function(r){r.data.session?demarrer():$("login").style.display="block"})}
+
+$("login").onsubmit=function(e){e.preventDefault();
+  sb.auth.signInWithPassword({email:$("email").value.trim(),password:$("mdp").value}).then(function(r){
+    if(r.error){msg("E-mail ou mot de passe incorrect.",true);return}
+    $("login").style.display="none";demarrer()})};
+$("quitter").onclick=function(){sb.auth.signOut().then(function(){location.reload()})};
+
+function apercu(){$("apercu").innerHTML=window.fmfcTexte($("texte").value)}
+$("texte").oninput=apercu;
+
+function demarrer(){
+  $("app").style.display="block";
+  sb.from("pages_texte").select("contenu").eq("id","a-propos").then(function(r){
+    if(r.error){msg("Impossible de charger le texte (la commande SQL des textes a-t-elle été exécutée ?).",true)}
+    var c=r.data&&r.data[0]&&r.data[0].contenu&&r.data[0].contenu.trim();
+    $("texte").value=c||DEFAUT;apercu()})}
+
+$("enregistrer").onclick=function(){
+  var t=$("texte").value.trim();
+  if(!t){msg("Le texte est vide : utilisez plutôt « Rétablir le texte d'origine ».",true);return}
+  sb.from("pages_texte").upsert({id:"a-propos",contenu:t,maj:new Date().toISOString()}).then(function(r){
+    if(r.error){msg("Échec de l'enregistrement. Réessayez.",true);return}
+    msg("Enregistré ✔ La page À propos est à jour.")})};
+
+$("origine").onclick=function(){
+  if(!confirm("Revenir au texte d'origine ? Vos modifications enregistrées seront perdues."))return;
+  sb.from("pages_texte").delete().eq("id","a-propos").then(function(r){
+    if(r.error){msg("Impossible de rétablir le texte.",true);return}
+    $("texte").value=DEFAUT;apercu();msg("Texte d'origine rétabli.")})};
+</script></body></html>

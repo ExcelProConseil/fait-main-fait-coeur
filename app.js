@@ -7,6 +7,16 @@
   function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 
 
+  // Texte simple -> HTML : paragraphes séparés par une ligne vide, **gras**, [texte](lien)
+  window.fmfcTexte=function(t){
+    return String(t||"").replace(/\r/g,"").split(/\n\s*\n/).map(function(p){
+      p=p.trim();if(!p)return "";
+      var h=esc(p).replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>");
+      h=h.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+|[a-z0-9\-]+\.html)\)/g,function(m,txt,u){
+        var ext=/^https?:/.test(u);return '<a href="'+u+'"'+(ext?' target="_blank" rel="noopener"':'')+'>'+txt+'</a>'});
+      return "<p>"+h.replace(/\n/g,"<br>")+"</p>"}).join("");
+  };
+
   // ----- Panier (mémorisé dans le navigateur du client) -----
   function lirePanier(){try{return (JSON.parse(localStorage.getItem("fmfc_panier"))||[]).map(function(l){l.qte=1;return l})}catch(e){return []}}
   function ecrirePanier(p){try{localStorage.setItem("fmfc_panier",JSON.stringify(p))}catch(e){}majBadge()}
@@ -40,7 +50,7 @@
   // Compteur de visites : anonyme, sans cookie (page vue, date, site d'origine)
   (function(){
     try{
-      if(!OK||/^(admin|commandes|statistiques)/.test(cur)||cur==="404.html")return;
+      if(!OK||/^(admin|commandes|statistiques|textes)/.test(cur)||cur==="404.html")return;
       if(/bot|crawl|spider|slurp|headless|lighthouse|preview/i.test(navigator.userAgent)||navigator.webdriver)return;
       for(var i=0;i<localStorage.length;i++){if(/^sb-.*-auth-token$/.test(localStorage.key(i)))return} // pas les visites d'Isabelle
       var ref="";try{var u=new URL(document.referrer);if(u.hostname&&u.hostname!==location.hostname)ref=u.hostname.replace(/^www\./,"").slice(0,100)}catch(e){}
@@ -49,6 +59,15 @@
         body:JSON.stringify({page:cur||"index.html",ref:ref})}).catch(function(){});
     }catch(e){}
   })();
+
+  // Page À propos : texte modifiable depuis l'administration
+  var apr=document.getElementById("texte-apropos");
+  if(apr&&OK){
+    fetch(cf.supabaseUrl+"/rest/v1/pages_texte?select=contenu&id=eq.a-propos",{headers:{apikey:cf.supabaseKey}})
+      .then(function(r){return r.ok?r.json():[]})
+      .then(function(rows){if(rows[0]&&rows[0].contenu&&rows[0].contenu.trim())apr.innerHTML=window.fmfcTexte(rows[0].contenu)})
+      .catch(function(){});
+  }
 
   // Accueil : les 6 univers
   var un=document.getElementById("univers");
@@ -104,6 +123,8 @@
       var autres=liste.filter(function(p){return !CATS.some(function(c){return c.id===p.categorie})});
       if(autres.length)html+='<section id="autres"><h2>Autres confections</h2><div class="grid">'+autres.map(carte).join("")+'</div></section>';
       el.innerHTML=html;
+      var mc=document.getElementById("menu-cat");
+      if(mc)mc.innerHTML="<strong>Les catégories</strong>"+CATS.map(function(c){return '<a href="#'+c.id+'">'+esc(c.titre)+'</a>'}).join("");
       var ld=liste.filter(function(p){return p.prix!=null}).map(function(p){
         var v=(p.variantes||[])[0];
         return {"@type":"Product",name:p.nom,description:p.description||p.nom,image:(v&&v.image_url)||p.image||undefined,
