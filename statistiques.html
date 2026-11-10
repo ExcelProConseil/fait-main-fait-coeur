@@ -82,7 +82,7 @@ function charger(){
       if(r.data.length===1000&&rows.length<50000)page(n+1000);else rendu(rows,depuis)})
   })(0)}
 
-function top(map,id,nom){
+function classer(map,id,nom){
   var l=Object.keys(map).map(function(k){return [k,map[k]]}).sort(function(a,b){return b[1]-a[1]}).slice(0,10);
   var t=$(id);t.innerHTML="";
   if(!l.length){var tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=2;td.textContent="Pas encore de données";tr.appendChild(td);t.appendChild(tr);return}
@@ -106,6 +106,6 @@ function rendu(rows,depuis){
   serie.forEach(function(x){var b=document.createElement("div");b.style.height=Math.max(2,Math.round(x[1]/max*100))+"%";
     b.title=x[0].toLocaleDateString("fr-FR")+" : "+x[1]+" page(s) vue(s)";g.appendChild(b)});
   $("debut").textContent=depuis.toLocaleDateString("fr-FR");$("fin").textContent=new Date().toLocaleDateString("fr-FR");
-  top(pages,"pages",function(k){return NOMS[k]||k});
-  top(sources,"sources")}
+  classer(pages,"pages",function(k){return NOMS[k]||k});
+  classer(sources,"sources")}
 </script></body></html>
