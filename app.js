@@ -168,7 +168,7 @@
         '<p><label><input type="radio" name="liv" value="mr"'+(retrait?'':' checked')+'> Livraison Mondial Relay : 4 €</label><br>'+
         '<label><input type="radio" name="liv" value="at"'+(retrait?' checked':'')+'> Retrait directement à l’atelier : gratuit</label></p>'+
         '<p>Sous-total : '+fmt(sous)+'<br>Livraison : '+fmt(port)+'<br><strong>Total : '+fmt(total)+'</strong></p>'+
-        '<div class="row"><button class="btn" id="cb">Payer par carte bancaire (CB)</button><button class="btn alt" id="paypal">Payer avec PayPal</button></div>'+
+        '<div class="row"><button class="btn" id="cb">Payer par carte bancaire (CB) avec PayPal</button></div>'+
         '<p class="muted">Paiement sécurisé via Paypal/CB : la carte bancaire se règle sans avoir de compte PayPal.</p>';
       pe.querySelectorAll('input[name=liv]').forEach(function(r){r.onchange=function(){retrait=r.value==="at";rendrePanier()}});
       pe.querySelectorAll(".q").forEach(function(b){b.onclick=function(){
@@ -197,9 +197,8 @@
             alert("Désolée, « "+(it?it.nom:"un article")+" » vient d’être réservé ou vendu : c’est une pièce unique. Je le retire de votre panier.");
             ecrirePanier(p.filter(function(l){return l.id!==cle}));rendrePanier();return}
           document.body.appendChild(f);f.submit()})};
-      var bcb=document.getElementById("cb"),bpp=document.getElementById("paypal");
+      var bcb=document.getElementById("cb");
       if(bcb)bcb.onclick=function(){payer("cb")};
-      if(bpp)bpp.onclick=function(){payer("paypal")};
     };
     rendrePanier();
     window.addEventListener("pageshow",function(e){if(e.persisted)rendrePanier()}); // retour depuis PayPal : boutons réactivés
