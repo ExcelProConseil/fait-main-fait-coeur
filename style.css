@@ -59,3 +59,14 @@ section[id]{scroll-margin-top:90px}
 .cat-nav a{text-decoration:none;color:var(--text);padding:3px 0}
 .cat-nav a:hover{color:var(--accent);text-decoration:underline}
 @media(min-width:1500px){.cat-nav{position:fixed;left:24px;top:130px;width:calc((100vw - 1000px)/2 - 56px);max-width:none;margin:0;z-index:5}}
+/* Boutique : menu des catégories à gauche, qui suit le défilement (dès 900 px de large) */
+.contact-box.col{display:none}
+@media(min-width:900px){
+main.boutique{max-width:1240px;display:grid;grid-template-columns:230px minmax(0,1fr);column-gap:28px;align-items:start}
+main.boutique>h1,main.boutique>.intro-row{grid-column:1/-1}
+main.boutique>.cat-nav{grid-column:1;grid-row:3;position:sticky;top:100px;left:auto;width:auto;max-width:none;margin:0;z-index:1}
+main.boutique>#produits{grid-column:2;grid-row:3}}
+@media(min-width:1350px){
+main.boutique{max-width:1500px;grid-template-columns:230px minmax(0,1fr) 230px}
+main.boutique .intro-row .contact-box{display:none}
+main.boutique>.contact-box.col{display:block;grid-column:3;grid-row:3;position:sticky;top:100px;left:auto;right:auto;width:auto;max-width:none;margin:0;z-index:1}}
