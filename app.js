@@ -168,40 +168,42 @@
         '<p><label><input type="radio" name="liv" value="mr"'+(retrait?'':' checked')+'> Livraison Mondial Relay : 4 €</label><br>'+
         '<label><input type="radio" name="liv" value="at"'+(retrait?' checked':'')+'> Retrait directement à l’atelier : gratuit</label></p>'+
         '<p>Sous-total : '+fmt(sous)+'<br>Livraison : '+fmt(port)+'<br><strong>Total : '+fmt(total)+'</strong></p>'+
-        '<div class="row"><button class="btn" id="cb">Payer par carte bancaire (CB) avec PayPal</button></div>'+
-        '<p class="muted">Paiement sécurisé via Paypal/CB : la carte bancaire se règle sans avoir de compte PayPal.</p>';
+        '<div class="row"><button class="btn" id="cb">Payer par carte bancaire (CB)</button></div>'+
+        '<p class="muted">Paiement sécurisé par carte bancaire (CB).</p>';
       pe.querySelectorAll('input[name=liv]').forEach(function(r){r.onchange=function(){retrait=r.value==="at";rendrePanier()}});
       pe.querySelectorAll(".q").forEach(function(b){b.onclick=function(){
         var p=lirePanier(),i=+b.dataset.i;
         if(b.dataset.a==="p")p[i].qte++;else if(b.dataset.a==="m")p[i].qte--;else p[i].qte=0;
         ecrirePanier(p.filter(function(l){return l.qte>0}));rendrePanier()}});
-      var payer=function(mode){
-        if(!CONFIG.paypal||CONFIG.paypal.indexOf("A-REMPLACER")>=0){alert("Le paiement en ligne n’est pas encore disponible. Merci de réessayer plus tard ou de me contacter via l’onglet Contact.");return}
-        var f=document.createElement("form");f.method="post";f.action="https://www.paypal.com/cgi-bin/webscr";
+      var payer=function(){
+        var b=document.getElementById("cb");if(b)b.disabled=true;
         var ref="FMFC-"+Date.now().toString(36).toUpperCase().slice(-5)+Math.random().toString(36).slice(2,5).toUpperCase();
-        var champs={invoice:ref,landing_page:mode==="cb"?"billing":"login",cmd:"_cart",upload:"1",business:CONFIG.paypal,currency_code:"EUR",charset:"utf-8",lc:"FR",handling_cart:port.toFixed(2),
-          "return":location.origin+location.pathname.replace("panier.html","merci.html"),cancel_return:location.href};
-        pn.forEach(function(l,i){champs["item_name_"+(i+1)]=l.nom;champs["amount_"+(i+1)]=l.prix.toFixed(2);champs["quantity_"+(i+1)]=l.qte});
-        Object.keys(champs).forEach(function(k){var i=document.createElement("input");i.type="hidden";i.name=k;i.value=champs[k];f.appendChild(i)});
-        ["cb","paypal"].forEach(function(id){var b=document.getElementById(id);if(b)b.disabled=true});
-        // on note et on réserve la commande ; seul un article indisponible bloque le paiement
         var tk=jeton();
-        var noter=fetch(CONFIG.supabaseUrl+"/rest/v1/commandes",{method:"POST",
+        var echec=function(){alert("Le paiement en ligne est momentanément indisponible. Merci de réessayer dans un instant ou de me contacter via l’onglet Contact.");if(b)b.disabled=false};
+        // 1) on note et on réserve la commande ; 2) le serveur crée le paiement ; 3) on envoie le client sur la page de paiement sécurisée
+        fetch(CONFIG.supabaseUrl+"/rest/v1/commandes",{method:"POST",
           headers:{apikey:CONFIG.supabaseKey,"Content-Type":"application/json",Prefer:"return=minimal"},
           body:JSON.stringify({reference:ref,token:tk,articles:pn.map(function(l){return {id:l.id,nom:l.nom,prix:l.prix,image:l.image||""}}),sous_total:sous,livraison:port,total:total,
             mode_livraison:retrait?"Retrait à l’atelier":"Mondial Relay"})})
-          .then(function(r){return r.ok?null:r.json().catch(function(){return null})}).catch(function(){return null});
-        Promise.race([noter,new Promise(function(r){setTimeout(r,3000)})]).then(function(err){
-          if(err&&String(err.message||"").indexOf("INDISPONIBLE:")===0){
-            var cle=String(err.message).slice(13),p=lirePanier(),it=p.filter(function(l){return l.id===cle})[0];
-            alert("Désolée, « "+(it?it.nom:"un article")+" » vient d’être réservé ou vendu : c’est une pièce unique. Je le retire de votre panier.");
-            ecrirePanier(p.filter(function(l){return l.id!==cle}));rendrePanier();return}
-          document.body.appendChild(f);f.submit()})};
+          .then(function(r){return r.ok?null:r.json().catch(function(){return {}})})
+          .then(function(err){
+            if(err){
+              if(String(err.message||"").indexOf("INDISPONIBLE:")===0){
+                var cle=String(err.message).slice(13),p=lirePanier(),it=p.filter(function(l){return l.id===cle})[0];
+                alert("Désolée, « "+(it?it.nom:"un article")+" » vient d’être réservé ou vendu : c’est une pièce unique. Je le retire de votre panier.");
+                ecrirePanier(p.filter(function(l){return l.id!==cle}));rendrePanier();return}
+              return echec()}
+            return fetch(CONFIG.supabaseUrl+"/functions/v1/swift-processor",{method:"POST",
+              headers:{apikey:CONFIG.supabaseKey,"Content-Type":"application/json"},
+              body:JSON.stringify({reference:ref,token:tk})})
+              .then(function(r){return r.json()})
+              .then(function(j){if(j&&j.url&&/^https:\/\/checkout\.sumup\.com\//.test(j.url))location.href=j.url;else echec()})})
+          .catch(echec)};
       var bcb=document.getElementById("cb");
-      if(bcb)bcb.onclick=function(){payer("cb")};
+      if(bcb)bcb.onclick=payer;
     };
     rendrePanier();
-    window.addEventListener("pageshow",function(e){if(e.persisted)rendrePanier()}); // retour depuis PayPal : boutons réactivés
+    window.addEventListener("pageshow",function(e){if(e.persisted)rendrePanier()}); // retour depuis la page de paiement : bouton réactivé
   }
 
   var f=document.getElementById("contact");
