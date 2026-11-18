@@ -21,9 +21,9 @@ label{font-size:.9rem;color:var(--muted)}.row{display:flex;gap:8px;flex-wrap:wra
 </form>
 
 <section id="app" style="display:none">
-  <div class="row"><button class="btn" id="ajout">+ Ajouter un produit</button>
+  <div class="row">
   <a class="btn small" href="commandes.html">Commandes →</a><a class="btn small" href="statistiques.html">Statistiques →</a><a class="btn small" href="textes.html">Texte « À propos » →</a><button class="btn small" id="quitter">Se déconnecter</button></div>
-  <p>Chaque modification s'affiche sur le site dès que vous cliquez sur « Enregistrer ».</p>
+  <p>Chaque modification s'affiche sur le site dès que vous cliquez sur « Enregistrer ». Les produits sont rangés par catégorie : cliquez sur une catégorie pour l'ouvrir, puis sur « + Nouveau produit dans cette catégorie ». Le nouveau produit apparaît tout en haut de sa catégorie.</p>
   <div id="liste"></div>
   <h2>Les univers de la page d'accueil</h2>
   <p>Changez le nom, la photo et le petit texte de chacune des 6 catégories. Le nom change partout : accueil, boutique et liste de choix des produits.</p>
@@ -68,7 +68,20 @@ function btn(txt,cls,fn){var b=document.createElement("button");b.className="btn
 
 function rendu(){
   var L=$("liste");L.innerHTML="";
-  if(!produits.length)L.textContent="Aucun produit. Cliquez sur « Ajouter un produit ».";
+  // une section repliable par catégorie (+ « Sans catégorie » s'il en reste)
+  var corps={},connues={};
+  CATEGORIES.forEach(function(c){connues[c.id]=1});
+  var clef=function(p){return connues[p.categorie]?p.categorie:""};
+  var groupes=CATEGORIES.map(function(c){return {id:c.id,titre:titreDe(c)}});
+  if(produits.some(function(p){return !connues[p.categorie]}))groupes.push({id:"",titre:"Sans catégorie"});
+  groupes.forEach(function(g){
+    var n=produits.filter(function(p){return clef(p)===g.id}).length;
+    var det=document.createElement("details");det.dataset.cat=g.id;det.open=!!ouverts[g.id];
+    det.ontoggle=function(){ouverts[g.id]=det.open};
+    var sm=document.createElement("summary");sm.style.cssText="cursor:pointer;font-size:1.1rem;font-weight:bold;padding:8px 0";
+    sm.textContent=g.titre+" ("+n+")";det.appendChild(sm);
+    if(g.id){var ba=btn("+ Nouveau produit dans cette catégorie","",function(){ajouter(g.id)});ba.style.margin="8px 0";det.appendChild(ba)}
+    var corp=document.createElement("div");det.appendChild(corp);corps[g.id]=corp;L.appendChild(det)});
   produits.forEach(function(p,i){
     var d=document.createElement("div");d.className="prod";
     var poi=document.createElement("div");poi.className="poignee";poi.textContent="☰ Glisser pour déplacer";poi.title="Glissez ce bandeau pour changer l'ordre";
@@ -77,7 +90,9 @@ function rendu(){
     d.ondragend=function(){d.draggable=false;d.classList.remove("glisse")};
     d.ondragover=function(e){e.preventDefault();d.classList.add("cible")};
     d.ondragleave=function(){d.classList.remove("cible")};
-    d.ondrop=function(e){e.preventDefault();d.classList.remove("cible");deplacer(+e.dataTransfer.getData("text/plain"),i)};
+    d.ondrop=function(e){e.preventDefault();d.classList.remove("cible");var de=+e.dataTransfer.getData("text/plain");
+      if(produits[de]&&clef(produits[de])!==clef(p)){msg("Le déplacement se fait à l'intérieur d'une même catégorie. Pour changer de catégorie, utilisez la liste « Catégorie » du produit.",true);return}
+      deplacer(de,i)};
     d.appendChild(poi);
     var nom=document.createElement("input");nom.value=p.nom;champ(d,"Nom",nom);
     var prix=document.createElement("input");prix.inputMode="decimal";prix.value=p.prix==null?"":String(p.prix).replace(".",",");
@@ -109,7 +124,9 @@ function rendu(){
     var r=document.createElement("div");r.className="row";
     r.appendChild(btn("Enregistrer","",function(){enregistrer(p,nom,prix,desc,f,this,cat,vars)}));
     r.appendChild(btn("Supprimer","danger",function(){supprimer(p)}));
-    d.appendChild(r);L.appendChild(d)})}
+    d.appendChild(r);corps[clef(p)].appendChild(d);
+    if(p.id===aMontrer){aMontrer=null;setTimeout(function(){d.scrollIntoView({behavior:"smooth",block:"center"});nom.focus();nom.select()},50)}})}
+var ouverts={},aMontrer=null;
 
 function envoyerPhoto(fichier,prefixe){
   return reduire(fichier).then(function(blob){
@@ -150,11 +167,12 @@ function deplacer(de,vers){
   var x=produits.splice(de,1)[0];produits.splice(vers,0,x);
   Promise.all(produits.map(function(p,k){return p.ordre===k+1?null:sb.from("produits").update({ordre:k+1}).eq("id",p.id)}).filter(Boolean)).then(function(){msg("Ordre enregistré ✔");charger()})}
 
-$("ajout").onclick=function(){
+function ajouter(cat){
   var min=produits.reduce(function(m,p){return Math.min(m,p.ordre)},1);
-  sb.from("produits").insert({nom:"Nouveau produit",ordre:min-1,categorie:""}).then(function(r){
+  sb.from("produits").insert({nom:"Nouveau produit",ordre:min-1,categorie:cat}).select("id").then(function(r){
     if(r.error){msg("Ajout impossible.",true);return}
-    msg("Produit ajouté : remplissez-le puis enregistrez.");charger()})};
+    ouverts[cat]=true;aMontrer=r.data&&r.data[0]?r.data[0].id:null;
+    msg("Produit ajouté en haut de la catégorie : remplissez-le puis enregistrez.");charger()})}
 
 // ----- Univers de l'accueil -----
 var univers={};
