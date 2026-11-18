@@ -50,7 +50,7 @@
   // Compteur de visites : anonyme, sans cookie (page vue, date, site d'origine)
   (function(){
     try{
-      if(!OK||/^(admin|commandes|statistiques|textes)/.test(cur)||cur==="404.html")return;
+      if(!OK||/^(admin|commandes|statistiques|textes|cartes)/.test(cur)||cur==="404.html")return;
       if(/bot|crawl|spider|slurp|headless|lighthouse|preview/i.test(navigator.userAgent)||navigator.webdriver)return;
       for(var i=0;i<localStorage.length;i++){if(/^sb-.*-auth-token$/.test(localStorage.key(i)))return} // pas les visites d'Isabelle
       var ref="";try{var u=new URL(document.referrer);if(u.hostname&&u.hostname!==location.hostname)ref=u.hostname.replace(/^www\./,"").slice(0,100)}catch(e){}
@@ -155,21 +155,37 @@
   // Page panier
   var pe=document.getElementById("panier");
   if(pe){
-    var retrait=false;
+    var retrait=false,carte=null; // carte : {code, dispo} une fois vérifiée par le serveur
     var fmt=function(n){return n.toFixed(2).replace(".",",")+" €"};
     var rendrePanier=function(){
       var pn=lirePanier();
       if(!pn.length){pe.innerHTML='<p>Votre panier est vide.</p><a class="btn" href="boutique.html">Voir la boutique</a>';return}
       var sous=0;pn.forEach(function(l){sous+=l.prix*l.qte});
       var port=retrait?0:4,total=sous+port;
+      var reduc=carte?Math.min(carte.dispo,sous):0,apayer=Math.round((total-reduc)*100)/100;
       pe.innerHTML='<table class="tbl"><thead><tr><th>Article</th><th>Prix</th><th></th></tr></thead><tbody>'+
         pn.map(function(l,i){return '<tr><td>'+esc(l.nom)+'</td><td>'+fmt(l.prix)+'</td><td><button class="q" data-a="x" data-i="'+i+'" title="Retirer">✕</button></td></tr>'}).join("")+
         '</tbody></table>'+
         '<p><label><input type="radio" name="liv" value="mr"'+(retrait?'':' checked')+'> Livraison Mondial Relay : 4 €</label><br>'+
         '<label><input type="radio" name="liv" value="at"'+(retrait?' checked':'')+'> Retrait directement à l’atelier : gratuit</label></p>'+
-        '<p>Sous-total : '+fmt(sous)+'<br>Livraison : '+fmt(port)+'<br><strong>Total : '+fmt(total)+'</strong></p>'+
-        '<div class="row"><button class="btn" id="cb">Payer par carte bancaire (CB)</button></div>'+
+        (carte?'<p>Carte cadeau <strong>'+esc(carte.code)+'</strong> appliquée : −'+fmt(reduc)+' <button class="btn alt" id="retirer-carte" type="button">Retirer</button></p>':
+          '<p><label for="codecarte">Carte cadeau ou bon d’achat : saisissez votre code</label><br><span class="row"><input id="codecarte" type="text" autocomplete="off" maxlength="24" placeholder="Votre code" style="max-width:220px"> <button class="btn alt" id="appliquer" type="button">Appliquer</button></span><br><span id="retour-carte" class="muted"></span></p>')+
+        '<p>Sous-total : '+fmt(sous)+'<br>Livraison : '+fmt(port)+(carte?'<br>Carte cadeau (articles uniquement) : −'+fmt(reduc):'')+'<br><strong>Total à payer : '+fmt(apayer)+'</strong></p>'+
+        '<div class="row"><button class="btn" id="cb">'+(apayer===0?'Valider ma commande (réglée par carte cadeau)':'Payer par carte bancaire (CB)')+'</button></div>'+
         '<p class="muted">Paiement sécurisé par carte bancaire (CB).</p>';
+      var ba=document.getElementById("appliquer"),br=document.getElementById("retirer-carte");
+      if(br)br.onclick=function(){carte=null;rendrePanier()};
+      if(ba)ba.onclick=function(){
+        var champ=document.getElementById("codecarte"),ret=document.getElementById("retour-carte");
+        var code=champ.value.toUpperCase().replace(/\s+/g,"");
+        if(!/^[A-Z0-9-]{4,24}$/.test(code)){ret.textContent="Ce code ne semble pas valide.";return}
+        ba.disabled=true;ret.textContent="Vérification…";
+        fetch(CONFIG.supabaseUrl+"/functions/v1/swift-processor",{method:"POST",headers:{apikey:CONFIG.supabaseKey,"Content-Type":"application/json"},
+          body:JSON.stringify({action:"verifier",code:code,token:jeton()})})
+          .then(function(r){return r.json()}).then(function(j){
+            if(j&&j.ok){carte={code:code,dispo:Number(j.disponible)};rendrePanier()}
+            else{ret.textContent="Code inconnu ou carte déjà utilisée.";ba.disabled=false}})
+          .catch(function(){ret.textContent="Vérification impossible pour le moment. Réessayez dans un instant.";ba.disabled=false})};
       pe.querySelectorAll('input[name=liv]').forEach(function(r){r.onchange=function(){retrait=r.value==="at";rendrePanier()}});
       pe.querySelectorAll(".q").forEach(function(b){b.onclick=function(){
         var p=lirePanier(),i=+b.dataset.i;
@@ -195,9 +211,12 @@
               return echec()}
             return fetch(CONFIG.supabaseUrl+"/functions/v1/swift-processor",{method:"POST",
               headers:{apikey:CONFIG.supabaseKey,"Content-Type":"application/json"},
-              body:JSON.stringify({reference:ref,token:tk})})
+              body:JSON.stringify({reference:ref,token:tk,code:carte?carte.code:""})})
               .then(function(r){return r.json()})
-              .then(function(j){if(j&&j.url&&/^https:\/\/checkout\.sumup\.com\//.test(j.url))location.href=j.url;else echec()})})
+              .then(function(j){
+                if(j&&j.gratuit){location.href="merci.html";return}
+                if(j&&j.error&&/Carte cadeau/.test(j.error)){alert("Cette carte cadeau n’est plus utilisable (déjà utilisée ou solde épuisé). Je l’enlève de votre panier.");carte=null;rendrePanier();return}
+                if(j&&j.url&&/^https:\/\/checkout\.sumup\.com\//.test(j.url))location.href=j.url;else echec()})})
           .catch(echec)};
       var bcb=document.getElementById("cb");
       if(bcb)bcb.onclick=payer;

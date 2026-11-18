@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Cartes cadeaux — FAIT MAIN FAIT CŒUR</title>
+<link rel="icon" type="image/png" href="images/favicon.png">
+<link rel="stylesheet" href="style.css">
+<style>
+.barre{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}
+.small{background:var(--muted)}.danger{background:#b3261e}
+#msg{position:sticky;top:0;padding:10px;border-radius:8px;background:var(--accent2);margin:8px 0;display:none}
+#login{max-width:360px}
+.nouvelle{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;display:grid;gap:8px;max-width:460px}
+label{font-size:.9rem;color:var(--muted)}
+.code{font-family:monospace;font-weight:bold;white-space:nowrap}
+.off{opacity:.55}
+.wrap{overflow-x:auto}
+</style></head>
+<body><header></header><main>
+<h1>Cartes cadeaux</h1>
+<div id="msg"></div>
+<p id="config-ko" style="display:none">Supabase n'est pas encore configuré.</p>
+
+<form id="login" style="display:none">
+  <p>Connectez-vous pour gérer les cartes cadeaux.</p>
+  <input id="email" type="email" placeholder="E-mail" autocomplete="username" required>
+  <input id="mdp" type="password" placeholder="Mot de passe" autocomplete="current-password" required>
+  <button class="btn">Se connecter</button>
+</form>
+
+<section id="app" style="display:none">
+  <div class="barre">
+    <a class="btn small" href="admin.html">← Produits</a>
+    <a class="btn small" href="commandes.html">Commandes →</a>
+    <a class="btn small" href="statistiques.html">Statistiques →</a>
+    <a class="btn small" href="textes.html">Texte « À propos » →</a>
+    <button class="btn small" id="quitter">Se déconnecter</button>
+  </div>
+  <p>Chaque carte cadeau a un <strong>code</strong> et un <strong>montant</strong>. La cliente saisit son code dans le panier : la réduction s'applique automatiquement. Si elle n'utilise pas toute la carte, le <strong>solde restant</strong> reste disponible pour un prochain achat. Le solde baisse dès que la commande passe en « Payée ».</p>
+
+  <form id="nouvelle" class="nouvelle">
+    <h2 style="margin:0">Créer une carte cadeau</h2>
+    <label for="montant">Montant en €</label>
+    <input id="montant" inputmode="decimal" placeholder="ex. 20" required>
+    <label for="code">Code (laissez vide pour en générer un automatiquement)</label>
+    <input id="code" placeholder="ex. FMFC-AB12-CD34" maxlength="24" autocomplete="off">
+    <label for="note">Note pour vous (facultatif : pour qui, quand…)</label>
+    <input id="note" maxlength="200" placeholder="ex. Offerte à Marie, Noël 2026">
+    <button class="btn">Créer la carte</button>
+  </form>
+
+  <h2>Mes cartes</h2>
+  <div class="wrap"><table class="tbl"><thead><tr><th>Code</th><th>Montant</th><th>Reste à utiliser</th><th>Note</th><th>Active</th><th></th></tr></thead><tbody id="corps"></tbody></table></div>
+</section>
+</main><footer></footer>
+<script src="produits.js"></script><script src="app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+var $=function(i){return document.getElementById(i)};
+function msg(t,err){var m=$("msg");m.textContent=t;m.style.display="block";m.style.background=err?"#f9dedc":"";m.style.color=err?"#410e0b":"";clearTimeout(msg.t);msg.t=setTimeout(function(){m.style.display="none"},5000)}
+var C=window.CONFIG,sb=null,cartes=[];
+
+if(!C.supabaseUrl||C.supabaseUrl.indexOf("A-REMPLACER")>=0){$("config-ko").style.display="block"}
+else{sb=supabase.createClient(C.supabaseUrl,C.supabaseKey);
+  sb.auth.getSession().then(function(r){r.data.session?demarrer():$("login").style.display="block"})}
+
+$("login").onsubmit=function(e){e.preventDefault();
+  sb.auth.signInWithPassword({email:$("email").value.trim(),password:$("mdp").value}).then(function(r){
+    if(r.error){msg("E-mail ou mot de passe incorrect.",true);return}
+    $("login").style.display="none";demarrer()})};
+$("quitter").onclick=function(){sb.auth.signOut().then(function(){location.reload()})};
+
+function demarrer(){$("app").style.display="block";charger()}
+function euros(n){return Number(n).toFixed(2).replace(".",",")+" €"}
+function charger(){
+  sb.from("cartes_cadeaux").select("*").order("created_at",{ascending:false}).then(function(r){
+    if(r.error){msg("Impossible de charger les cartes (la commande SQL des cartes cadeaux a-t-elle été exécutée ?).",true);return}
+    cartes=r.data;rendu()})}
+
+// code aléatoire facile à lire (sans 0/O, 1/I)
+function genererCode(){
+  var al="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",b=new Uint8Array(8);crypto.getRandomValues(b);
+  var s="";for(var i=0;i<8;i++)s+=al[b[i]%al.length];
+  return "FMFC-"+s.slice(0,4)+"-"+s.slice(4)}
+
+$("nouvelle").onsubmit=function(e){e.preventDefault();
+  var m=$("montant").value.trim().replace(",",".").replace(/\s?€/,"");
+  if(m===""||isNaN(m)||Number(m)<=0||Number(m)>1000){msg("Le montant doit être un nombre entre 1 et 1000 (ex. 20 ou 12,50).",true);return}
+  var code=$("code").value.toUpperCase().replace(/\s+/g,"")||genererCode();
+  if(!/^[A-Z0-9-]{4,24}$/.test(code)){msg("Le code ne peut contenir que des lettres, des chiffres et des tirets (4 à 24 caractères).",true);return}
+  var mt=Math.round(Number(m)*100)/100;
+  sb.from("cartes_cadeaux").insert({code:code,montant:mt,solde:mt,note:$("note").value.trim()}).then(function(r){
+    if(r.error){msg(r.error.code==="23505"?"Ce code existe déjà. Choisissez-en un autre.":"Création impossible.",true);return}
+    $("nouvelle").reset();msg("Carte créée ✔ Code : "+code);charger()})};
+
+function rendu(){
+  var corps=$("corps");corps.innerHTML="";
+  if(!cartes.length){var tr0=document.createElement("tr"),td0=document.createElement("td");td0.colSpan=6;td0.textContent="Aucune carte pour le moment.";tr0.appendChild(td0);corps.appendChild(tr0);return}
+  cartes.forEach(function(c){
+    var tr=document.createElement("tr");if(!c.actif||Number(c.solde)<=0)tr.className="off";
+    var t=function(txt,cls){var td=document.createElement("td");if(cls)td.className=cls;td.textContent=txt;tr.appendChild(td);return td};
+    t(c.code,"code");t(euros(c.montant));
+    t(euros(c.solde)+(Number(c.solde)<=0?" (utilisée)":""));
+    var tn=document.createElement("td"),ni=document.createElement("input");ni.value=c.note||"";ni.maxLength=200;
+    ni.onchange=function(){sb.from("cartes_cadeaux").update({note:ni.value.trim()}).eq("code",c.code).then(function(r){r.error?msg("Enregistrement impossible.",true):msg("Enregistré ✔")})};
+    tn.appendChild(ni);tr.appendChild(tn);
+    var ta=document.createElement("td"),cb=document.createElement("input");cb.type="checkbox";cb.checked=c.actif;cb.title="Décochez pour bloquer la carte (perdue, volée…)";
+    cb.onchange=function(){sb.from("cartes_cadeaux").update({actif:cb.checked}).eq("code",c.code).then(function(r){
+      if(r.error){msg("Enregistrement impossible.",true);cb.checked=!cb.checked;return}
+      c.actif=cb.checked;msg(cb.checked?"Carte activée ✔":"Carte bloquée ✔");rendu()})};
+    ta.appendChild(cb);tr.appendChild(ta);
+    var td=document.createElement("td"),x=document.createElement("button");x.className="btn small";x.textContent="Supprimer";
+    x.onclick=function(){
+      if(!confirm("Supprimer définitivement la carte "+c.code+" ?"))return;
+      sb.from("cartes_cadeaux").delete().eq("code",c.code).then(function(r){
+        if(r.error){msg("Suppression impossible.",true);return}
+        msg("Carte supprimée.");charger()})};
+    td.appendChild(x);tr.appendChild(td);corps.appendChild(tr)})}
+</script></body></html>
